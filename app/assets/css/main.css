@@ -1,0 +1,86 @@
+/* assets/css/main.css */
+html,
+body {
+  padding: 0;
+  margin: 0;
+  font-family: -apple-system, BlinkMacSystemFont, Segoe UI, Roboto, Oxygen,
+    Ubuntu, Cantarell, Fira Sans, Droid Sans, Helvetica Neue, sans-serif;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+a:hover, a:active, a:focus {
+  color: #0070f3; /* uno: hover:text-blue-500 active:text-blue-500 focus:text-blue-500 */
+}
+
+* {
+  box-sizing: border-box;
+}
+
+/* Dark mode base */
+@media (prefers-color-scheme: light) { /* Note: Original CSS had 'light' for dark theme, which is confusing. Assuming it meant 'dark'. */
+  html {
+    color-scheme: dark;
+  }
+  body {
+    color: white;
+    background: black;
+  }
+  .dark_border_color { /* Custom class for elements needing specific dark border */
+    border-color: #222; /* uno: dark:border-gray-700/800 */
+  }
+  .dark_invert_img img { /* For images like Vercel logo */
+    filter: invert(1); /* uno: dark:invert */
+  }
+}
+
+/* Specific styles from page.module.css that are complex or structural */
+/* Consider moving to component styles or UnoCSS if simple enough */
+
+.timeline_wrapper {
+    background: #111;
+    color: #fff;
+    box-shadow: 0 0 0 100vmax #111;
+    clip-path: inset(0 -100vmax);
+    padding: 50px 0;
+    height: 200px; /* This might be dynamic or better handled */
+    overflow: hidden;
+    position: relative;
+}
+
+.canvas_wrapper {
+    margin: 30px 0;
+    padding: 50px 0;
+    background: #111;
+    color: #fff;
+    box-shadow: 0 0 0 100vmax #111;
+    clip-path: inset(0 -100vmax);
+    height: 200px; /* This might be dynamic or better handled */
+    overflow: hidden;
+    position: relative;
+}
+
+#mySvg {
+    /* transform: rotate(180deg); SVG rotation will be handled dynamically */
+    transition: all 1ms; /* Potentially remove if Vue handles transitions */
+    position: absolute;
+    top: 50px; /* This will depend on parent dimensions */
+    left: 0;
+}
+#mySvg * {
+    transition: all 1ms; /* Potentially remove */
+}
+
+/* scrollbar styles - these are pseudo-elements, best in global CSS */
+.node_list_scrollbar::-webkit-scrollbar {
+    -webkit-appearance: none;
+    width: 10px;
+}
+
+.node_list_scrollbar::-webkit-scrollbar-thumb {
+    border-radius: 5px;
+    background-color: rgba(0, 0, 0, .5);
+    -webkit-box-shadow: 0 0 1px rgba(255, 255, 255, .5);
+}

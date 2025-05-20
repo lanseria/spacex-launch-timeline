@@ -10,7 +10,6 @@ export default defineNuxtConfig({
     '@vite-pwa/nuxt',
     '@nuxt/eslint',
   ],
-
   devtools: {
     enabled: true,
   },
@@ -32,6 +31,9 @@ export default defineNuxtConfig({
       ],
     },
   },
+  css: [
+    '~/assets/css/main.css', // 全局样式
+  ],
 
   colorMode: {
     classSuffix: '',
