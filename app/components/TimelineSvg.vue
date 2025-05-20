@@ -29,6 +29,7 @@ const distCenterToChord = computed(() => {
 
 const circleCenterY = computed(() => props.svgHeight! + distCenterToChord.value)
 const circleCenterX = computed(() => effectiveSvgWidth.value / 2)
+
 function plotNodesOnCircle() {
   const svg = svgEl.value
   if (!svg)
@@ -127,14 +128,7 @@ function plotNodesOnCircle() {
     const textRotationAngleDeg = (angle_rad_node + Math.PI / 2) * (180 / Math.PI)
     name.setAttribute('transform', `rotate(${textRotationAngleDeg}, ${text_x_better}, ${text_y_better})`)
 
-    if (textRotationAngleDeg > 90 && textRotationAngleDeg < 270) {
-      name.setAttribute('text-anchor', 'end')
-      name.setAttribute('dx', '-3px')
-    }
-    else {
-      name.setAttribute('text-anchor', 'start')
-      name.setAttribute('dx', '3px')
-    }
+    name.setAttribute('text-anchor', 'middle') // Key change for centering
     name.setAttribute('dy', '0.35em') // Vertical alignment
     name.setAttribute('fill', (y_i < 0 || y_i > effectiveSvgHeight.value) ? '#777' : '#ffffff')
     name.setAttribute('font-size', '10')
