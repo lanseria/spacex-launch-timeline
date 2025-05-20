@@ -1,9 +1,10 @@
 <script setup lang="ts">
 // components/TimelineSvg.vue
 const props = defineProps<{
-  timestamps: number[] // Float values in minutes
+  timestamps: number[] // 事件的绝对时间戳 (秒), 相对于时间轴0点
   nodeNames: string[]
-  missionDuration: number // Total mission duration in float minutes
+  missionDuration: number // SVG 圆周代表的总时间跨度 (秒)
+  currentTime?: number // 当前时间在时间轴上的位置 (秒), 可选
   svgWidth?: number
   svgHeight?: number
 }>()
@@ -35,105 +36,123 @@ function plotNodesOnCircle() {
   if (!svg)
     return
 
-  const currentCircleRadius = circleRadius.value
+  const currentCircleRadius = circleRadius.value // Radius of the large background circle
   const currentCircleCenterX = circleCenterX.value
   const currentCircleCenterY = circleCenterY.value
 
-  svg.innerHTML = ''
+  svg.innerHTML = '' // Clear previous drawings
 
-  const mainCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-  mainCircle.setAttribute('cx', String(currentCircleCenterX))
-  mainCircle.setAttribute('cy', String(currentCircleCenterY)) // Center is likely below the SVG view
-  mainCircle.setAttribute('r', String(currentCircleRadius))
-  mainCircle.setAttribute('stroke', '#444') // Dim color for debugging
-  mainCircle.setAttribute('fill', 'none')
-  svg.appendChild(mainCircle)
+  // Main large circle (for visual reference)
+  const mainCircleElement = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+  mainCircleElement.setAttribute('cx', String(currentCircleCenterX))
+  mainCircleElement.setAttribute('cy', String(currentCircleCenterY))
+  mainCircleElement.setAttribute('r', String(currentCircleRadius))
+  mainCircleElement.setAttribute('stroke', '#444')
+  mainCircleElement.setAttribute('stroke-dasharray', '5,5')
+  mainCircleElement.setAttribute('fill', 'none')
+  svg.appendChild(mainCircleElement)
 
+  // Marker line at the top of SVG viewport
   const marker = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+  // ... (marker setup as before)
   marker.setAttribute('stroke', '#ffffff')
   marker.setAttribute('stroke-width', '2')
-  marker.setAttribute('x1', String(currentCircleCenterX)) // Centered horizontally
-  marker.setAttribute('y1', String(0)) // Top of SVG
+  marker.setAttribute('x1', String(currentCircleCenterX))
+  marker.setAttribute('y1', String(0))
   marker.setAttribute('x2', String(currentCircleCenterX))
-  marker.setAttribute('y2', String(10)) // Small line extending downwards
+  marker.setAttribute('y2', String(10))
   svg.appendChild(marker)
 
-  // Plotting nodes:
-  // Nodes are plotted on the circumference of the main large circle.
-  // Their positions are calculated relative to currentCircleCenterX and currentCircleCenterY.
-  // Only nodes that fall within the visible arc segment will actually be seen.
-
   const n = props.timestamps.length
-  // 'd_totalDuration' is the mission duration that corresponds to a full 360-degree sweep of the circle.
   const d_totalDuration = props.missionDuration <= 0 ? 1 : props.missionDuration
+
+  // Constants for node elements
+  const nodeCircleRadius = 5 // Radius of the small "Node circle"
+  const baseTextOffsetFromNodeEdge = 16 // Desired total distance from node edge to text center
+  const lineToTextGap = 10 // Gap between end of line and start of text bounding box (approx)
 
   for (let i = 0; i < n; i++) {
     const t_i = props.timestamps[i]
     const nodeNameText = props.nodeNames[i] || `Event ${i + 1}`
+    const isOutside = i % 2 === 0 // True for outside, false for inside
 
-    // Angle calculation for nodes on the large circle:
-    // 0 radians (or -PI/2) should be "straight up" from the circle's center.
-    // Angle increases clockwise.
-    const angle_rad_node = (t_i / d_totalDuration) * 2 * Math.PI - (Math.PI / 2)
+    // Angle for the node on the large circle (same for node, line, text direction)
+    const angle_rad_node = (t_i / d_totalDuration) * 2 * Math.PI - (Math.PI / 2) // 0 is top, clockwise
 
-    const x_i = currentCircleCenterX + currentCircleRadius * Math.cos(angle_rad_node)
-    const y_i = currentCircleCenterY + currentCircleRadius * Math.sin(angle_rad_node)
+    // Center of the "Node circle" (the small dot)
+    const node_dot_center_x = currentCircleCenterX + currentCircleRadius * Math.cos(angle_rad_node)
+    const node_dot_center_y = currentCircleCenterY + currentCircleRadius * Math.sin(angle_rad_node)
 
-    // Only draw elements if they are potentially visible within the SVG's height
-    // This is a rough filter; more precise would be to check against the arc.
-    if (y_i < -100 || y_i > effectiveSvgHeight.value + 100) { // Add some buffer
-      // continue; // Skip drawing if way off-screen vertically
-    }
+    // Draw the "Node circle"
+    const nodeDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+    nodeDot.setAttribute('cx', String(node_dot_center_x))
+    nodeDot.setAttribute('cy', String(node_dot_center_y))
+    nodeDot.setAttribute('r', String(nodeCircleRadius))
+    nodeDot.setAttribute('stroke', '#ffffff')
+    nodeDot.setAttribute('stroke-width', '1')
+    nodeDot.setAttribute('fill', (node_dot_center_y < 0 || node_dot_center_y > effectiveSvgHeight.value) ? '#555' : '#000000')
+    svg.appendChild(nodeDot)
 
-    // Node circle
-    const node = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-    node.setAttribute('cx', String(x_i))
-    node.setAttribute('cy', String(y_i))
-    node.setAttribute('r', '5')
-    node.setAttribute('stroke', '#ffffff')
-    node.setAttribute('stroke-width', '1')
-    node.setAttribute('fill', (y_i < 0 || y_i > effectiveSvgHeight.value) ? '#555' : '#000000') // Dim if outside primary view
-    svg.appendChild(node)
-
-    // Highlight (small dot) if node is "active" (near the top-center of the circle, effectively at the marker's angular position)
-    // This means t_i is close to 0 or close to d_totalDuration (if it wraps around)
+    // Highlight if near marker (as before)
     const isNearMarker = Math.abs(t_i) < (0.02 * d_totalDuration) || Math.abs(t_i - d_totalDuration) < (0.02 * d_totalDuration)
-    if (isNearMarker && y_i >= 0 && y_i <= effectiveSvgHeight.value) {
-      const nameCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-      nameCircle.setAttribute('cx', String(x_i))
-      nameCircle.setAttribute('cy', String(y_i))
-      nameCircle.setAttribute('r', '2')
-      nameCircle.setAttribute('fill', '#ffffff')
-      svg.appendChild(nameCircle)
+    if (isNearMarker && node_dot_center_y >= 0 && node_dot_center_y <= effectiveSvgHeight.value) {
+      const activeDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+      activeDot.setAttribute('cx', String(node_dot_center_x))
+      activeDot.setAttribute('cy', String(node_dot_center_y))
+      activeDot.setAttribute('r', '2') // Smaller inner dot
+      activeDot.setAttribute('fill', '#ffffff')
+      svg.appendChild(activeDot)
     }
 
-    // Text for node name
-    const name = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-    const textOffset = 20 // How far from the node circle the text appears
+    // Calculate positions for line and text
+    const directionMultiplier = isOutside ? 1 : -1
 
-    // Text position relative to the node on the large circle's circumference
-    const text_x = x_i + textOffset * Math.cos(angle_rad_node) // Simplistic offset for now
-    const text_y = y_i + textOffset * Math.sin(angle_rad_node) // Needs better logic for readability
+    // Line starts at the edge of the "Node circle"
+    const line_start_x = node_dot_center_x + directionMultiplier * nodeCircleRadius * Math.cos(angle_rad_node)
+    const line_start_y = node_dot_center_y + directionMultiplier * nodeCircleRadius * Math.sin(angle_rad_node)
 
-    // More sophisticated text positioning:
-    // Calculate the angle of the text relative to the node's point, so it's oriented outwards
-    const textAngleForPositioning = angle_rad_node
-    const text_x_better = x_i + textOffset * Math.cos(textAngleForPositioning)
-    const text_y_better = y_i + textOffset * Math.sin(textAngleForPositioning)
+    // Text center position:
+    // Total offset from "Node circle" center to text center.
+    // Includes nodeCircleRadius, length of the line, and gap to text.
+    const totalOffsetToTextCenter = directionMultiplier * (nodeCircleRadius + baseTextOffsetFromNodeEdge) // baseTextOffsetFromNodeEdge is from node edge
 
-    name.setAttribute('x', String(text_x_better))
-    name.setAttribute('y', String(text_y_better))
+    const text_center_x = node_dot_center_x + totalOffsetToTextCenter * Math.cos(angle_rad_node)
+    const text_center_y = node_dot_center_y + totalOffsetToTextCenter * Math.sin(angle_rad_node)
 
-    // Rotate text to be readable - this angle is relative to horizontal
+    // Line ends before the text center, leaving a gap
+    // Effective length of the line itself (from node edge to near text)
+    const lineLength = baseTextOffsetFromNodeEdge - lineToTextGap
+    if (lineLength < 1)
+      continue // Avoid drawing tiny or negative lines if offsets are too small
+
+    const line_end_x = node_dot_center_x + directionMultiplier * (nodeCircleRadius + lineLength) * Math.cos(angle_rad_node)
+    const line_end_y = node_dot_center_y + directionMultiplier * (nodeCircleRadius + lineLength) * Math.sin(angle_rad_node)
+
+    // Draw connecting line
+    const line = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+    line.setAttribute('x1', String(line_start_x))
+    line.setAttribute('y1', String(line_start_y))
+    line.setAttribute('x2', String(line_end_x))
+    line.setAttribute('y2', String(line_end_y))
+    line.setAttribute('stroke', (node_dot_center_y < 0 || node_dot_center_y > effectiveSvgHeight.value) ? '#777' : '#ffffff')
+    line.setAttribute('stroke-width', '1')
+    svg.appendChild(line)
+
+    // Draw Text for node name
+    const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+    nameText.setAttribute('x', String(text_center_x))
+    nameText.setAttribute('y', String(text_center_y))
+
+    // Rotate text to be perpendicular to the radius (tangential)
     const textRotationAngleDeg = (angle_rad_node + Math.PI / 2) * (180 / Math.PI)
-    name.setAttribute('transform', `rotate(${textRotationAngleDeg}, ${text_x_better}, ${text_y_better})`)
+    nameText.setAttribute('transform', `rotate(${textRotationAngleDeg}, ${text_center_x}, ${text_center_y})`)
 
-    name.setAttribute('text-anchor', 'middle') // Key change for centering
-    name.setAttribute('dy', '0.35em') // Vertical alignment
-    name.setAttribute('fill', (y_i < 0 || y_i > effectiveSvgHeight.value) ? '#777' : '#ffffff')
-    name.setAttribute('font-size', '10')
-    name.textContent = nodeNameText
-    svg.appendChild(name)
+    nameText.setAttribute('text-anchor', 'middle')
+    nameText.setAttribute('dy', '0.35em') // Approximate vertical centering
+    nameText.setAttribute('fill', (node_dot_center_y < 0 || node_dot_center_y > effectiveSvgHeight.value) ? '#777' : '#ffffff')
+    nameText.setAttribute('font-size', '10')
+    nameText.textContent = nodeNameText
+    svg.appendChild(nameText)
   }
 }
 
