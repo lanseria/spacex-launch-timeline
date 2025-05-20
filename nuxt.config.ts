@@ -10,6 +10,7 @@ export default defineNuxtConfig({
     '@vite-pwa/nuxt',
     '@nuxt/eslint',
   ],
+  ssr: false,
   devtools: {
     enabled: true,
   },
@@ -38,6 +39,9 @@ export default defineNuxtConfig({
   colorMode: {
     classSuffix: '',
   },
+  devServer: {
+    port: 3001,
+  },
 
   future: {
     compatibilityVersion: 4,
@@ -50,7 +54,6 @@ export default defineNuxtConfig({
     renderJsonPayloads: true,
     typedPages: true,
   },
-
   compatibilityDate: '2024-08-14',
 
   nitro: {

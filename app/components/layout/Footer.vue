@@ -1,5 +1,5 @@
-// components/layout/Footer.vue
 <script setup lang="ts">
+// components/layout/Footer.vue
 // No script logic needed for this simple footer
 </script>
 

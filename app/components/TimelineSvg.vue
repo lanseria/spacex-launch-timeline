@@ -1,5 +1,5 @@
-// components/TimelineSvg.vue
 <script setup lang="ts">
+// components/TimelineSvg.vue
 const props = defineProps<{
   timestamps: number[] // Float values in minutes
   nodeNames: string[]
@@ -9,64 +9,80 @@ const props = defineProps<{
 }>()
 
 const svgEl = ref<SVGElement | null>(null)
-const svgId = 'myTimelineSvg' // Dynamic ID if multiple instances
+const svgId = 'myTimelineSvg'
 const svgWrapperId = 'svg_wrapper_timeline'
 
 const effectiveSvgWidth = computed(() => props.svgWidth || 1200)
-const effectiveSvgHeight = computed(() => props.svgHeight || 1200)
+const effectiveSvgHeight = computed(() => props.svgHeight || 600) // Default height
 
+// --- Configuration for the main circle ---
+const exposedArcAngleDeg = 67.52 // The desired visible arc at the top of the SVG in degrees
+const exposedArcAngleRad = exposedArcAngleDeg * (Math.PI / 180)
+
+// Main circle's actual radius
+// Let's assume the diameter of the full circle is related to the SVG width
+const circleRadius = computed(() => effectiveSvgWidth.value / 2)
+
+const distCenterToChord = computed(() => {
+  return circleRadius.value * Math.cos(exposedArcAngleRad / 2)
+})
+
+const circleCenterY = computed(() => props.svgHeight! + distCenterToChord.value)
+const circleCenterX = computed(() => effectiveSvgWidth.value / 2)
 function plotNodesOnCircle() {
   const svg = svgEl.value
   if (!svg)
     return
 
-  const n = props.timestamps.length
-  const d = props.missionDuration <= 0 ? 1 : props.missionDuration // Avoid division by zero, use 1 as a fallback total duration if 0
-  const r = Math.min(effectiveSvgWidth.value, effectiveSvgHeight.value) / 2 - 50 // Radius, with some padding
-  const width = effectiveSvgWidth.value
-  const height = effectiveSvgHeight.value
+  const currentCircleRadius = circleRadius.value
+  const currentCircleCenterX = circleCenterX.value
+  const currentCircleCenterY = circleCenterY.value
 
-  svg.innerHTML = '' // Clear previous drawings
+  svg.innerHTML = ''
 
-  const centerX = width / 2
-  const centerY = height / 2
+  const mainCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+  mainCircle.setAttribute('cx', String(currentCircleCenterX))
+  mainCircle.setAttribute('cy', String(currentCircleCenterY)) // Center is likely below the SVG view
+  mainCircle.setAttribute('r', String(currentCircleRadius))
+  mainCircle.setAttribute('stroke', '#444') // Dim color for debugging
+  mainCircle.setAttribute('fill', 'none')
+  svg.appendChild(mainCircle)
 
-  // Create main circle
-  const circle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-  circle.setAttribute('cx', String(centerX))
-  circle.setAttribute('cy', String(centerY))
-  circle.setAttribute('r', String(r))
-  circle.setAttribute('stroke', '#ffffff')
-  circle.setAttribute('fill', 'none') // Typically unfilled
-  svg.appendChild(circle)
-
-  // Marker line (top of the circle)
   const marker = document.createElementNS('http://www.w3.org/2000/svg', 'line')
   marker.setAttribute('stroke', '#ffffff')
-  marker.setAttribute('stroke-width', '2') // Make it a bit more visible
-  // The marker should be at the "zero" point of the angle calculation.
-  // Original angle math: 2 * Math.PI * t_i / d + Math.PI / 2 makes 0 degrees (top) the start.
-  // So, x1,y1 to x2,y2 for a vertical line at the top.
-  marker.setAttribute('x1', String(centerX))
-  marker.setAttribute('y1', String(centerY - r - 5)) // Line starts above circle
-  marker.setAttribute('x2', String(centerX))
-  marker.setAttribute('y2', String(centerY - r + 5)) // Line ends slightly inside circle
+  marker.setAttribute('stroke-width', '2')
+  marker.setAttribute('x1', String(currentCircleCenterX)) // Centered horizontally
+  marker.setAttribute('y1', String(0)) // Top of SVG
+  marker.setAttribute('x2', String(currentCircleCenterX))
+  marker.setAttribute('y2', String(10)) // Small line extending downwards
   svg.appendChild(marker)
 
+  // Plotting nodes:
+  // Nodes are plotted on the circumference of the main large circle.
+  // Their positions are calculated relative to currentCircleCenterX and currentCircleCenterY.
+  // Only nodes that fall within the visible arc segment will actually be seen.
+
+  const n = props.timestamps.length
+  // 'd_totalDuration' is the mission duration that corresponds to a full 360-degree sweep of the circle.
+  const d_totalDuration = props.missionDuration <= 0 ? 1 : props.missionDuration
+
   for (let i = 0; i < n; i++) {
-    const t_i = props.timestamps[i] // This is time from T-0 (countdown) or T+0 (countup)
+    const t_i = props.timestamps[i]
     const nodeNameText = props.nodeNames[i] || `Event ${i + 1}`
 
-    // Angle calculation: 0 degrees is top, clockwise.
-    // t_i is minutes. d is total minutes for one revolution.
-    // Original: angle_i = 2 * Math.PI * t_i / d + Math.PI / 2 (makes 0 at right, counter-clockwise if PI/2 is 0 rad)
-    // Let's simplify: 0 at top, clockwise
-    // An angle of 0 should be at (centerX, centerY - r)
-    // Angle in radians: (t_i / d) * 2 * Math.PI. We subtract Math.PI / 2 to shift 0 to the top.
-    let angle_rad = (t_i / d) * 2 * Math.PI - (Math.PI / 2)
+    // Angle calculation for nodes on the large circle:
+    // 0 radians (or -PI/2) should be "straight up" from the circle's center.
+    // Angle increases clockwise.
+    const angle_rad_node = (t_i / d_totalDuration) * 2 * Math.PI - (Math.PI / 2)
 
-    const x_i = centerX + r * Math.cos(angle_rad)
-    const y_i = centerY + r * Math.sin(angle_rad)
+    const x_i = currentCircleCenterX + currentCircleRadius * Math.cos(angle_rad_node)
+    const y_i = currentCircleCenterY + currentCircleRadius * Math.sin(angle_rad_node)
+
+    // Only draw elements if they are potentially visible within the SVG's height
+    // This is a rough filter; more precise would be to check against the arc.
+    if (y_i < -100 || y_i > effectiveSvgHeight.value + 100) { // Add some buffer
+      // continue; // Skip drawing if way off-screen vertically
+    }
 
     // Node circle
     const node = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
@@ -75,12 +91,13 @@ function plotNodesOnCircle() {
     node.setAttribute('r', '5')
     node.setAttribute('stroke', '#ffffff')
     node.setAttribute('stroke-width', '1')
-    node.setAttribute('fill', '#000000')
+    node.setAttribute('fill', (y_i < 0 || y_i > effectiveSvgHeight.value) ? '#555' : '#000000') // Dim if outside primary view
     svg.appendChild(node)
 
-    // Highlight if node is near the marker (top)
-    // This condition needs to be robust based on the marker's position and angle interpretation
-    if (Math.abs(t_i) < (0.05 * d) || Math.abs(t_i - d) < (0.05 * d)) { // Example: if timestamp is very small or near full duration
+    // Highlight (small dot) if node is "active" (near the top-center of the circle, effectively at the marker's angular position)
+    // This means t_i is close to 0 or close to d_totalDuration (if it wraps around)
+    const isNearMarker = Math.abs(t_i) < (0.02 * d_totalDuration) || Math.abs(t_i - d_totalDuration) < (0.02 * d_totalDuration)
+    if (isNearMarker && y_i >= 0 && y_i <= effectiveSvgHeight.value) {
       const nameCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
       nameCircle.setAttribute('cx', String(x_i))
       nameCircle.setAttribute('cy', String(y_i))
@@ -92,45 +109,37 @@ function plotNodesOnCircle() {
     // Text for node name
     const name = document.createElementNS('http://www.w3.org/2000/svg', 'text')
     const textOffset = 20 // How far from the node circle the text appears
-    const textAngleDeg = (angle_rad * 180 / Math.PI) + 90 // Angle for text rotation (to keep upright)
 
-    // Position text outside the main circle, adjust based on quadrant for readability
-    let text_x = centerX + (r + textOffset) * Math.cos(angle_rad)
-    let text_y = centerY + (r + textOffset) * Math.sin(angle_rad)
+    // Text position relative to the node on the large circle's circumference
+    const text_x = x_i + textOffset * Math.cos(angle_rad_node) // Simplistic offset for now
+    const text_y = y_i + textOffset * Math.sin(angle_rad_node) // Needs better logic for readability
 
-    name.setAttribute('x', String(text_x))
-    name.setAttribute('y', String(text_y))
+    // More sophisticated text positioning:
+    // Calculate the angle of the text relative to the node's point, so it's oriented outwards
+    const textAngleForPositioning = angle_rad_node
+    const text_x_better = x_i + textOffset * Math.cos(textAngleForPositioning)
+    const text_y_better = y_i + textOffset * Math.sin(textAngleForPositioning)
 
-    // Rotate text to be readable
-    // The transform-origin should be the text's own (x,y)
-    name.setAttribute('transform', `rotate(${textAngleDeg}, ${text_x}, ${text_y})`)
+    name.setAttribute('x', String(text_x_better))
+    name.setAttribute('y', String(text_y_better))
 
-    // Adjust text-anchor based on angle to prevent overlap with circle
-    if (textAngleDeg > 90 && textAngleDeg < 270) { // Text on the left side
+    // Rotate text to be readable - this angle is relative to horizontal
+    const textRotationAngleDeg = (angle_rad_node + Math.PI / 2) * (180 / Math.PI)
+    name.setAttribute('transform', `rotate(${textRotationAngleDeg}, ${text_x_better}, ${text_y_better})`)
+
+    if (textRotationAngleDeg > 90 && textRotationAngleDeg < 270) {
       name.setAttribute('text-anchor', 'end')
-      // Nudge it a bit more if it was rotated
-      name.setAttribute('dx', '-5px') // dx/dy on rotated text can be tricky
+      name.setAttribute('dx', '-3px')
     }
-    else { // Text on the right side
+    else {
       name.setAttribute('text-anchor', 'start')
-      name.setAttribute('dx', '5px')
+      name.setAttribute('dx', '3px')
     }
     name.setAttribute('dy', '0.35em') // Vertical alignment
-
-    name.setAttribute('fill', '#ffffff')
+    name.setAttribute('fill', (y_i < 0 || y_i > effectiveSvgHeight.value) ? '#777' : '#ffffff')
     name.setAttribute('font-size', '10')
     name.textContent = nodeNameText
     svg.appendChild(name)
-
-    // Connecting line from node to text (optional, can make it busy)
-    // const line = document.createElementNS('http://www.w3.org/2000/svg', 'line');
-    // line.setAttribute('x1', String(x_i));
-    // line.setAttribute('y1', String(y_i));
-    // line.setAttribute('x2', String(text_x - ( (textAngleDeg > 90 && textAngleDeg < 270) ? -5:5) ) ); // approx end of text
-    // line.setAttribute('y2', String(text_y));
-    // line.setAttribute('stroke', '#ffffff');
-    // line.setAttribute('stroke-width', '0.5');
-    // svg.appendChild(line);
   }
 }
 
@@ -139,46 +148,25 @@ onMounted(() => {
 })
 
 watch(
-  () => [props.timestamps, props.nodeNames, props.missionDuration, props.svgWidth, props.svgHeight],
+  () => [
+    props.timestamps,
+    props.nodeNames,
+    props.missionDuration,
+    effectiveSvgWidth.value,
+    effectiveSvgHeight.value,
+  ],
   () => {
     plotNodesOnCircle()
   },
   { deep: true },
 )
-
-// No onBeforeUnmount needed as SVG elements are children and will be removed with component.
 </script>
 
 <template>
   <div class="canvas_wrapper">
     <div :id="svgWrapperId" data-angle="0">
-      <!-- id was used in css, could be dynamic -->
-      <svg :id="svgId" ref="svgEl" :width="svgWidth" :height="svgHeight" />
+      <!-- eslint-disable-next-line vue/html-self-closing -->
+      <svg :id="svgId" ref="svgEl" :width="svgWidth" :height="svgHeight"></svg>
     </div>
   </div>
 </template>
-
-<style scoped>
-/* Scoped styles specific to this SVG component if needed */
-.canvas_wrapper {
-  /* Copied from global, ensure it's what you want here or rely on global */
-  margin: 30px 0;
-  padding: 50px 0; /* Padding provides space for SVG elements outside the circle */
-  background: #111;
-  color: #fff;
-  box-shadow: 0 0 0 100vmax #111;
-  clip-path: inset(0 -100vmax);
-  min-height: 400px; /* Give it some default minimum height */
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  overflow: visible; /* Allow SVG text to go outside defined bounds */
-  position: relative;
-}
-#myTimelineSvg {
-  /* ID used in script */
-  /* transform: rotate(0deg); /* Initial rotation, if any. SVG drawing code handles node positions based on time. */
-  /* SVG itself does not need to rotate if the nodes are plotted dynamically based on changing timestamps */
-  /* transition: all 1ms; /* Not recommended for performance */
-}
-</style>

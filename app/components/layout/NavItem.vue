@@ -1,5 +1,5 @@
-// components/layout/NavItem.vue
 <script setup lang="ts">
+// components/layout/NavItem.vue
 interface NavItemProps {
   href: string
   caption: string

@@ -1,5 +1,5 @@
-// components/layout/Navbar.vue
 <script setup lang="ts">
+// components/layout/Navbar.vue
 // No specific script logic here, imports LayoutNavItem automatically
 </script>
 

@@ -1,5 +1,5 @@
-// pages/index.vue
 <script setup lang="ts">
+// pages/index.vue
 const {
   timestamps,
   nodeNames,
@@ -112,7 +112,7 @@ const {
     <!-- SVG Timeline Visualization -->
     <TimelineSvg
       :timestamps="processedTimestamps" :node-names="nodeNames" :mission-duration="missionTimeFloat"
-      :svg-width="1200" :svg-height="600"
+      :svg-width="1920" :svg-height="200"
     />
     <!-- Adjusted SVG height for better display, original was 1200x1200 which is very large -->
 

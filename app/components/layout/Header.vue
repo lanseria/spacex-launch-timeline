@@ -1,5 +1,5 @@
-// components/layout/Header.vue
 <script setup lang="ts">
+// components/layout/Header.vue
 // No specific script logic here
 </script>
 
