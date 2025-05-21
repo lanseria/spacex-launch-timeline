@@ -26,9 +26,9 @@ const {
       <!-- Other head tags specific to this page -->
     </Head>
 
-    <div class="mx-auto my-8 gap-4 grid grid-cols-1 max-w-[1200px] justify-center md:grid-cols-3">
+    <div class="mx-auto my-8 gap-4 grid grid-cols-1 w-1200px justify-center md:grid-cols-3">
       <!-- Card 1: Add Events -->
-      <div class="card p-6 border border-gray-200 rounded-lg max-w-full dark:border-gray-700 md:max-w-xs">
+      <div class="p-6 border border-gray-200 rounded-lg max-w-full dark:border-gray-700">
         <h2 class="text-lg font-semibold mb-4">
           Add Events (In Minutes:Seconds or Minutes.Decimal)
         </h2>
@@ -60,7 +60,7 @@ const {
       </div>
 
       <!-- Card 2: Start/Stop & Mission Time -->
-      <div class="card p-6 border border-gray-200 rounded-lg max-w-full dark:border-gray-700 md:max-w-xs">
+      <div class="p-6 border border-gray-200 rounded-lg flex-1 max-w-full dark:border-gray-700">
         <h2 class="text-lg font-semibold mb-2">
           Controls
         </h2>
@@ -86,7 +86,7 @@ const {
       </div>
 
       <!-- Card 3: Time to Launch & (Removed Rotation Angle input) -->
-      <div class="card p-6 border border-gray-200 rounded-lg max-w-full dark:border-gray-700 md:max-w-xs">
+      <div class="p-6 border border-gray-200 rounded-lg max-w-full dark:border-gray-700">
         <h2 class="text-lg font-semibold mb-2">
           Time to Launch
         </h2>
@@ -132,21 +132,6 @@ const {
 </template>
 
 <style scoped>
-/* Scoped styles for page-specific elements, complementing UnoCSS */
-.card {
-  /* Base styles from original, UnoCSS can override/extend */
-  /* transition: color 0.15s ease, border-color 0.15s ease; */
-  /* hover:text-blue-500 hover:border-blue-500 focus:text-blue-500 focus:border-blue-500 */
-  /* dark:border-gray-700 */
-}
-
-.card h2 {
-  /* margin: 0 0 1rem 0; */
-  /* uno: mb-4 */
-  /* font-size: 1rem; */
-  /* uno: text-base or text-lg */
-}
-
 .input-field {
   @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:focus:ring-offset-gray-900 dark:focus:border-indigo-400;
 }
@@ -159,12 +144,15 @@ const {
   @apply bg-gray-300 dark:bg-gray-700 cursor-not-allowed;
 }
 
-/* Styling for fun text, can be UnoCSS too */
-.fun {
-  /* font-size: 16px; line-height: 1.5; */
+/* scrollbar styles - these are pseudo-elements, best in global CSS */
+.node_list_scrollbar::-webkit-scrollbar {
+  -webkit-appearance: none;
+  width: 10px;
 }
 
-.fun_desc {
-  /* font-size: 14px; line-height: 1.5; width: 60%; margin: 0 auto; */
+.node_list_scrollbar::-webkit-scrollbar-thumb {
+  border-radius: 5px;
+  background-color: rgba(0, 0, 0, 0.5);
+  -webkit-box-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
 }
 </style>

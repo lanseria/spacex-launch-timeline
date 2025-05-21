@@ -10,8 +10,6 @@ const props = defineProps<{
 }>()
 
 const svgEl = ref<SVGElement | null>(null)
-const svgId = 'myTimelineSvg'
-const svgWrapperId = 'svg_wrapper_timeline'
 
 const effectiveSvgWidth = computed(() => props.svgWidth || 1200)
 const effectiveSvgHeight = computed(() => props.svgHeight || 600) // Default height
@@ -72,7 +70,7 @@ function plotNodesOnCircle() {
   const lineToTextGap = 10 // Gap between end of line and start of text bounding box (approx)
 
   for (let i = 0; i < n; i++) {
-    const t_i = props.timestamps[i]
+    const t_i = props.timestamps[i]!
     const nodeNameText = props.nodeNames[i] || `Event ${i + 1}`
     const isOutside = i % 2 === 0 // True for outside, false for inside
 
@@ -177,9 +175,9 @@ watch(
 
 <template>
   <div class="canvas_wrapper">
-    <div :id="svgWrapperId" data-angle="0">
+    <div data-angle="0" class="flex justify-center">
       <!-- eslint-disable-next-line vue/html-self-closing -->
-      <svg :id="svgId" ref="svgEl" :width="svgWidth" :height="svgHeight"></svg>
+      <svg ref="svgEl" :width="svgWidth" :height="svgHeight"></svg>
     </div>
   </div>
 </template>
