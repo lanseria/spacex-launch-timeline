@@ -1,6 +1,8 @@
 <script setup lang="ts">
 // pages/index.vue
 const {
+  missionNameDisplay,
+  vehicleNameDisplay,
   timestamps,
   nodeNames,
   missionTimeRaw,
@@ -8,127 +10,135 @@ const {
   timerClock,
   isStarted,
   processedTimestamps,
-  missionTimeFloat,
+  missionTimeSeconds,
+  currentTimeOffset,
   addNode,
   deleteNode,
   toggleLaunch,
 } = useSpaceTimeline()
-
-// The original `page.module.css` had extensive styling for a different timeline approach.
-// That has been replaced by the SVG component.
-// UnoCSS classes are used for general layout and input styling.
 </script>
 
 <template>
-  <div>
+  <LayoutAdapter>
     <Head>
-      <Title>SpaceX Launch Timeline - Home</Title>
-      <!-- Other head tags specific to this page -->
+      <Title>SpaceX 发射时间线 - 主页</Title>
     </Head>
 
+    <div class="mx-auto my-4 text-center">
+      <h1 class="text-2xl font-bold">
+        {{ missionNameDisplay }}
+      </h1>
+      <p class="text-md text-gray-400">
+        {{ vehicleNameDisplay }}
+      </p>
+    </div>
+
     <div class="mx-auto my-8 gap-4 grid grid-cols-1 w-1200px justify-center md:grid-cols-3">
-      <!-- Card 1: Add Events -->
+      <!-- 卡片 1: 添加事件 -->
       <div class="p-6 border border-gray-200 rounded-lg max-w-full dark:border-gray-700">
         <h2 class="text-lg font-semibold mb-4">
-          Add Events (In Minutes:Seconds or Minutes.Decimal)
+          添加事件 (单位: 秒)
         </h2>
         <div class="node_list_scrollbar pr-2 max-h-[200px] overflow-y-auto">
           <div v-for="(timestamp, i) in timestamps" :key="i" class="mb-2 flex items-center space-x-2">
             <input
-              v-model="timestamps[i]" type="text" placeholder="e.g., 0:30 or 0.5"
+              v-model.number="timestamps[i]"
+              type="number"
+              placeholder="例如: -60, 0, 120"
               class="input-field flex-grow dark:text-white dark:bg-gray-700"
-              :aria-label="`Timestamp for event ${i + 1}`"
+              :aria-label="`事件 ${i + 1} 的时间戳 (秒)`"
             >
             <input
-              v-model="nodeNames[i]" type="text" placeholder="Event Name"
-              class="input-field flex-grow dark:text-white dark:bg-gray-700" :aria-label="`Name for event ${i + 1}`"
+              v-model="nodeNames[i]"
+              type="text"
+              placeholder="事件名称"
+              class="input-field flex-grow dark:text-white dark:bg-gray-700"
+              :aria-label="`事件 ${i + 1} 的名称`"
             >
             <button
-              class="btn-action bg-red-500 hover:bg-red-600" :disabled="timestamps.length <= 1"
-              aria-label="Delete event" @click="deleteNode(i)"
+              class="btn-action bg-red-500 hover:bg-red-600"
+              :disabled="timestamps.length <= 1"
+              aria-label="删除事件"
+              @click="deleteNode(i)"
             >
               -
             </button>
           </div>
         </div>
         <button
-          class="btn-action mt-2 bg-green-500 w-full hover:bg-green-600" aria-label="Add new event"
+          class="btn-action mt-2 bg-green-500 w-full hover:bg-green-600"
+          aria-label="添加新事件"
           @click="addNode"
         >
-          +
+          + 添加事件
         </button>
       </div>
 
-      <!-- Card 2: Start/Stop & Mission Time -->
+      <!-- 卡片 2: 控制 & SVG总时长 -->
       <div class="p-6 border border-gray-200 rounded-lg flex-1 max-w-full dark:border-gray-700">
         <h2 class="text-lg font-semibold mb-2">
-          Controls
+          控制
         </h2>
         <button
           class="btn-action mb-2 w-full"
           :class="isStarted ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'"
           @click="toggleLaunch"
         >
-          {{ isStarted ? "Stop" : "Start" }} Countdown
+          {{ isStarted ? "停止" : "开始" }}倒计时
         </button>
 
         <div class="my-4 border-t border-gray-300 dark:border-gray-600" />
 
         <h2 class="text-lg font-semibold mb-2">
-          Total Mission Time
+          SVG时间轴总时长 (秒)
         </h2>
         <input
-          v-model="missionTimeRaw" type="text" placeholder="e.g., 8:37 or 8.61"
-          class="input-field w-full dark:text-white dark:bg-gray-700" aria-label="Total mission time"
+          v-model="missionTimeRaw"
+          type="text"
+          placeholder="例如: 3600"
+          class="input-field w-full dark:text-white dark:bg-gray-700"
+          aria-label="SVG时间轴总时长 (秒)"
         >
-        <small class="text-xs text-gray-500 dark:text-gray-400">Format: MM:SS or Minutes.Decimal (e.g., 8:37 or
-          8.61)</small>
+        <small class="text-xs text-gray-500 dark:text-gray-400">
+          定义SVG圆周代表的总秒数。例如3600秒，若T-0在中心，则显示范围约 T±1800秒。
+        </small>
       </div>
 
-      <!-- Card 3: Time to Launch & (Removed Rotation Angle input) -->
+      <!-- 卡片 3: 发射倒计时起点 -->
       <div class="p-6 border border-gray-200 rounded-lg max-w-full dark:border-gray-700">
         <h2 class="text-lg font-semibold mb-2">
-          Time to Launch
+          发射倒计时起点 (秒)
         </h2>
         <input
-          v-model="timeValueRaw" type="text" placeholder="e.g., 0.1 for 6s"
-          class="input-field w-full dark:text-white dark:bg-gray-700" aria-label="Time to launch"
+          v-model="timeValueRaw"
+          type="text"
+          placeholder="例如: 60 (从T-60秒开始)"
+          class="input-field w-full dark:text-white dark:bg-gray-700"
+          aria-label="发射倒计时秒数 (正数)"
         >
-        <small class="text-xs text-gray-500 dark:text-gray-400">In Minutes.Decimal (e.g., 0.1 for 6 seconds)</small>
-
-        <!-- Rotation Angle was an input, but its calculation seems internal to the original SVG logic. -->
-        <!-- If it's a user-configurable parameter for the SVG, it can be added back. -->
-        <!-- For now, assuming it's derived or constant. -->
+        <small class="text-xs text-gray-500 dark:text-gray-400">
+          从T减多少秒开始倒计时，请输入正数。例如60代表从 T-60秒 开始。
+        </small>
       </div>
     </div>
 
-    <!-- Timer Clock Display -->
+    <!-- 计时器时钟显示 -->
     <div
       class="text-4xl text-white font-mono mx-auto my-8 p-4 text-center rounded-lg bg-gray-800 max-w-md shadow-lg dark:bg-black"
     >
       {{ timerClock }}
     </div>
 
-    <!-- SVG Timeline Visualization -->
+    <!-- SVG 时间线可视化 -->
     <TimelineSvg
-      :timestamps="processedTimestamps" :node-names="nodeNames" :mission-duration="missionTimeFloat"
-      :svg-width="1920" :svg-height="200"
+      :timestamps="processedTimestamps"
+      :node-names="nodeNames"
+      :mission-duration="missionTimeSeconds"
+      :current-time-offset="currentTimeOffset"
+      :svg-width="1920"
+      :svg-height="200"
     />
-    <!-- Adjusted SVG height for better display, original was 1200x1200 which is very large -->
-
-    <div class="my-10 px-4 text-center">
-      <p class="fun text-lg">
-        Made just for fun!
-      </p>
-      <p class="fun_desc text-sm text-gray-600 mx-auto max-w-2xl dark:text-gray-400">
-        I could have made it a lot better, but I think this is good enough to play with. :)
-        <br>Besides, I was just experimenting with Nuxt 3 / Vue 3 and wanted a cool idea with smaller interactions.
-        <br>This is primarily designed for desktop.
-        If an algorithm is devised for plotting the nodes based on the actual mission time, then a whole lot of other
-        features such as zoom in/out the timeline and few more interactions can be added.
-      </p>
-    </div>
-  </div>
+  </LayoutAdapter>
 </template>
 
 <style scoped>
@@ -144,7 +154,6 @@ const {
   @apply bg-gray-300 dark:bg-gray-700 cursor-not-allowed;
 }
 
-/* scrollbar styles - these are pseudo-elements, best in global CSS */
 .node_list_scrollbar::-webkit-scrollbar {
   -webkit-appearance: none;
   width: 10px;

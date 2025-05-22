@@ -1,10 +1,10 @@
 <script setup lang="ts">
 // components/TimelineSvg.vue
 const props = defineProps<{
-  timestamps: number[] // 事件的绝对时间戳 (秒), 相对于时间轴0点
+  timestamps: number[] // 事件的绝对时间戳 (秒), 相对于T-0 (例如: -60, 0, 120)
   nodeNames: string[]
   missionDuration: number // SVG 圆周代表的总时间跨度 (秒)
-  currentTime?: number // 当前时间在时间轴上的位置 (秒), 可选
+  currentTimeOffset?: number // 当前时间偏移量 (秒), 从T-0开始计算。T-60s时为-60, T+10s时为10。
   svgWidth?: number
   svgHeight?: number
 }>()
@@ -12,20 +12,20 @@ const props = defineProps<{
 const svgEl = ref<SVGElement | null>(null)
 
 const effectiveSvgWidth = computed(() => props.svgWidth || 1200)
-const effectiveSvgHeight = computed(() => props.svgHeight || 600) // Default height
+const effectiveSvgHeight = computed(() => props.svgHeight || 200)
 
-// --- Configuration for the main circle ---
-const exposedArcAngleDeg = 67.52 // The desired visible arc at the top of the SVG in degrees
+// --- 圆弧几何配置 ---
+// 圆弧半径，这里我们让它与SVG视口宽度相关，可以调整比例系数来改变曲率
+const exposedArcAngleDeg = 60 // The desired visible arc at the top of the SVG in degrees
 const exposedArcAngleRad = exposedArcAngleDeg * (Math.PI / 180)
 
-// Main circle's actual radius
-// Let's assume the diameter of the full circle is related to the SVG width
 const circleRadius = computed(() => effectiveSvgWidth.value / 2)
 
 const distCenterToChord = computed(() => {
   return circleRadius.value * Math.cos(exposedArcAngleRad / 2)
 })
-
+// 圆心Y坐标。我们希望圆弧的顶部（对应T-0或当前时间）在SVG视口的y=0附近。
+// 如果圆心 (cx, R)，则圆弧顶部在 (cx, 0)，SVG y轴向下为正。
 const circleCenterY = computed(() => props.svgHeight! + distCenterToChord.value)
 const circleCenterX = computed(() => effectiveSvgWidth.value / 2)
 
@@ -34,123 +34,153 @@ function plotNodesOnCircle() {
   if (!svg)
     return
 
-  const currentCircleRadius = circleRadius.value // Radius of the large background circle
+  const currentCircleRadius = circleRadius.value
   const currentCircleCenterX = circleCenterX.value
   const currentCircleCenterY = circleCenterY.value
+  // currentTimeOffset: T-60s时值为-60, T-0时为0, T+60s时为60
+  const currentTimelineTime = props.currentTimeOffset ?? 0
 
-  svg.innerHTML = '' // Clear previous drawings
+  svg.innerHTML = '' // 清除旧内容
 
-  // Main large circle (for visual reference)
-  const mainCircleElement = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-  mainCircleElement.setAttribute('cx', String(currentCircleCenterX))
-  mainCircleElement.setAttribute('cy', String(currentCircleCenterY))
-  mainCircleElement.setAttribute('r', String(currentCircleRadius))
-  mainCircleElement.setAttribute('stroke', '#444')
-  mainCircleElement.setAttribute('stroke-dasharray', '5,5')
-  mainCircleElement.setAttribute('fill', 'none')
-  svg.appendChild(mainCircleElement)
+  // 主指示圆弧 (仅绘制可见部分，或绘制完整圆作为参考)
+  // 为了简化，我们仅绘制节点，背景圆弧可以省略或用CSS伪元素模拟
+  // 若要绘制参考圆弧:
+  const mainArc = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+  const arcRadius = currentCircleRadius
+  // 定义圆弧的起点和终点角度（例如，覆盖整个SVG宽度）
+  const angleSpan = Math.PI / 2 // 决定圆弧的张开程度
+  const startAngle = -Math.PI / 2 - angleSpan / 2
+  const endAngle = -Math.PI / 2 + angleSpan / 2
+  const x1 = currentCircleCenterX + arcRadius * Math.cos(startAngle)
+  const y1 = currentCircleCenterY + arcRadius * Math.sin(startAngle)
+  const x2 = currentCircleCenterX + arcRadius * Math.cos(endAngle)
+  const y2 = currentCircleCenterY + arcRadius * Math.sin(endAngle)
+  mainArc.setAttribute('d', `M ${x1} ${y1} A ${arcRadius} ${arcRadius} 0 0 1 ${x2} ${y2}`)
+  mainArc.setAttribute('stroke', '#FFFFFF90')
+  mainArc.setAttribute('stroke-width', '2')
+  mainArc.setAttribute('fill', 'none')
+  svg.appendChild(mainArc)
 
-  // Marker line at the top of SVG viewport
-  const marker = document.createElementNS('http://www.w3.org/2000/svg', 'line')
-  // ... (marker setup as before)
-  marker.setAttribute('stroke', '#ffffff')
-  marker.setAttribute('stroke-width', '2')
-  marker.setAttribute('x1', String(currentCircleCenterX))
-  marker.setAttribute('y1', String(0))
-  marker.setAttribute('x2', String(currentCircleCenterX))
-  marker.setAttribute('y2', String(10))
-  svg.appendChild(marker)
+  // "当前时间" 标记线 (垂直线在SVG顶部中心)
+  const markerLine = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+  markerLine.setAttribute('x1', String(currentCircleCenterX))
+  markerLine.setAttribute('y1', String(0))
+  markerLine.setAttribute('x2', String(currentCircleCenterX))
+  markerLine.setAttribute('y2', String(15))
+  markerLine.setAttribute('stroke', '#00c0ff') // 亮蓝色标记
+  markerLine.setAttribute('stroke-width', '3')
+  svg.appendChild(markerLine)
 
-  const n = props.timestamps.length
-  const d_totalDuration = props.missionDuration <= 0 ? 1 : props.missionDuration
+  const markerText = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+  markerText.setAttribute('x', String(currentCircleCenterX + 8))
+  markerText.setAttribute('y', String(12))
+  markerText.setAttribute('fill', '#00c0ff')
+  markerText.setAttribute('font-size', '10px')
+  markerText.setAttribute('font-family', 'monospace')
+  markerText.textContent = 'NOW'
+  svg.appendChild(markerText)
 
-  // Constants for node elements
-  const nodeCircleRadius = 5 // Radius of the small "Node circle"
-  const baseTextOffsetFromNodeEdge = 16 // Desired total distance from node edge to text center
-  const lineToTextGap = 10 // Gap between end of line and start of text bounding box (approx)
+  const numEvents = props.timestamps.length
+  // missionDuration 是 SVG 圆周所代表的总时间。T-0 (NOW) 在顶部中心。
+  // 节点根据其 (eventTime - currentTimelineTime) 的值来定位。
+  const halfMissionDuration = props.missionDuration / 2
+  const nodeDotRadius = 5
+  const nodeOuterRadius = 5 // 外圆圈的半径
+  const nodeInnerDotRadiusSmall = 2.5 // 过去事件的内点半径
+  const nodeInnerDotRadiusLarge = 3// 接近NOW标记的内点半径 (高亮)
 
-  for (let i = 0; i < n; i++) {
-    const t_i = props.timestamps[i]!
-    const nodeNameText = props.nodeNames[i] || `Event ${i + 1}`
-    const isOutside = i % 2 === 0 // True for outside, false for inside
+  const textOffsetFromNodeEdge = 18
+  const lineToTextGap = 7
 
-    // Angle for the node on the large circle (same for node, line, text direction)
-    const angle_rad_node = (t_i / d_totalDuration) * 2 * Math.PI - (Math.PI / 2) // 0 is top, clockwise
+  for (let i = 0; i < numEvents; i++) {
+    const eventAbsoluteTime = props.timestamps[i]!
+    const eventName = props.nodeNames[i] || `事件 ${i + 1}`
+    const timeRelativeToNow = eventAbsoluteTime - currentTimelineTime
+    const angleRad = (timeRelativeToNow / halfMissionDuration) * Math.PI - (Math.PI / 2)
 
-    // Center of the "Node circle" (the small dot)
-    const node_dot_center_x = currentCircleCenterX + currentCircleRadius * Math.cos(angle_rad_node)
-    const node_dot_center_y = currentCircleCenterY + currentCircleRadius * Math.sin(angle_rad_node)
+    const nodeCenterX = currentCircleCenterX + currentCircleRadius * Math.cos(angleRad)
+    const nodeCenterY = currentCircleCenterY + currentCircleRadius * Math.sin(angleRad)
 
-    // Draw the "Node circle"
-    const nodeDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-    nodeDot.setAttribute('cx', String(node_dot_center_x))
-    nodeDot.setAttribute('cy', String(node_dot_center_y))
-    nodeDot.setAttribute('r', String(nodeCircleRadius))
-    nodeDot.setAttribute('stroke', '#ffffff')
-    nodeDot.setAttribute('stroke-width', '1')
-    nodeDot.setAttribute('fill', (node_dot_center_y < 0 || node_dot_center_y > effectiveSvgHeight.value) ? '#555' : '#000000')
-    svg.appendChild(nodeDot)
+    const isVisibleVertically = nodeCenterY >= -nodeOuterRadius && nodeCenterY <= effectiveSvgHeight.value + nodeOuterRadius
+    if (!isVisibleVertically)
+      continue
 
-    // Highlight if near marker (as before)
-    const isNearMarker = Math.abs(t_i) < (0.02 * d_totalDuration) || Math.abs(t_i - d_totalDuration) < (0.02 * d_totalDuration)
-    if (isNearMarker && node_dot_center_y >= 0 && node_dot_center_y <= effectiveSvgHeight.value) {
-      const activeDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-      activeDot.setAttribute('cx', String(node_dot_center_x))
-      activeDot.setAttribute('cy', String(node_dot_center_y))
-      activeDot.setAttribute('r', '2') // Smaller inner dot
-      activeDot.setAttribute('fill', '#ffffff')
-      svg.appendChild(activeDot)
+    // 1. 绘制所有节点的白色外圆圈 (描边，无填充)
+    const nodeOuterCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+    nodeOuterCircle.setAttribute('cx', String(nodeCenterX))
+    nodeOuterCircle.setAttribute('cy', String(nodeCenterY))
+    nodeOuterCircle.setAttribute('r', String(nodeOuterRadius))
+    nodeOuterCircle.setAttribute('fill', '#000') // 无填充
+    nodeOuterCircle.setAttribute('stroke', '#FFF') // 白色描边
+    nodeOuterCircle.setAttribute('stroke-width', '1.5') // 描边宽度
+    svg.appendChild(nodeOuterCircle)
+
+    // 2. 根据状态绘制内部的实心点
+    if (Math.abs(timeRelativeToNow) <= 2) { // 2秒内接近NOW标记
+      const innerDotActive = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+      innerDotActive.setAttribute('cx', String(nodeCenterX))
+      innerDotActive.setAttribute('cy', String(nodeCenterY))
+      innerDotActive.setAttribute('r', String(nodeInnerDotRadiusLarge))
+      innerDotActive.setAttribute('fill', '#FFF') // 高亮颜色 (例如亮蓝色)
+      // innerDotActive.setAttribute('stroke', 'none'); // 通常不需要描边
+      svg.appendChild(innerDotActive)
     }
+    else if (timeRelativeToNow < -2) { // 过去事件 (早于-2秒)
+      const innerDotPast = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+      innerDotPast.setAttribute('cx', String(nodeCenterX))
+      innerDotPast.setAttribute('cy', String(nodeCenterY))
+      innerDotPast.setAttribute('r', String(nodeInnerDotRadiusSmall))
+      innerDotPast.setAttribute('fill', '#FFF') // 白色实心点
+      // innerDotPast.setAttribute('stroke', 'none');
+      svg.appendChild(innerDotPast)
+    }
+    // 对于 timeRelativeToNow > 2 (未来事件)，不绘制内部点，保持为空心圆圈
 
-    // Calculate positions for line and text
-    const directionMultiplier = isOutside ? 1 : -1
+    // 绘制连接线和文字 (内外分布)
+    const isOutsideText = i % 2 === 0 // 交替内外放置文字
+    const textDirectionMultiplier = isOutsideText ? 1 : -1
 
-    // Line starts at the edge of the "Node circle"
-    const line_start_x = node_dot_center_x + directionMultiplier * nodeCircleRadius * Math.cos(angle_rad_node)
-    const line_start_y = node_dot_center_y + directionMultiplier * nodeCircleRadius * Math.sin(angle_rad_node)
+    // 线条起点 (节点圆点边缘)
+    const lineStartX = nodeCenterX + textDirectionMultiplier * nodeDotRadius * Math.cos(angleRad)
+    const lineStartY = nodeCenterY + textDirectionMultiplier * nodeDotRadius * Math.sin(angleRad)
 
-    // Text center position:
-    // Total offset from "Node circle" center to text center.
-    // Includes nodeCircleRadius, length of the line, and gap to text.
-    const totalOffsetToTextCenter = directionMultiplier * (nodeCircleRadius + baseTextOffsetFromNodeEdge) // baseTextOffsetFromNodeEdge is from node edge
-
-    const text_center_x = node_dot_center_x + totalOffsetToTextCenter * Math.cos(angle_rad_node)
-    const text_center_y = node_dot_center_y + totalOffsetToTextCenter * Math.sin(angle_rad_node)
-
-    // Line ends before the text center, leaving a gap
-    // Effective length of the line itself (from node edge to near text)
-    const lineLength = baseTextOffsetFromNodeEdge - lineToTextGap
+    // 线条长度
+    const lineLength = textOffsetFromNodeEdge - lineToTextGap - nodeDotRadius
     if (lineLength < 1)
-      continue // Avoid drawing tiny or negative lines if offsets are too small
+      continue // 线太短不绘制
 
-    const line_end_x = node_dot_center_x + directionMultiplier * (nodeCircleRadius + lineLength) * Math.cos(angle_rad_node)
-    const line_end_y = node_dot_center_y + directionMultiplier * (nodeCircleRadius + lineLength) * Math.sin(angle_rad_node)
+    // 线条终点
+    const lineEndX = nodeCenterX + textDirectionMultiplier * (nodeDotRadius + lineLength) * Math.cos(angleRad)
+    const lineEndY = nodeCenterY + textDirectionMultiplier * (nodeDotRadius + lineLength) * Math.sin(angleRad)
 
-    // Draw connecting line
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line')
-    line.setAttribute('x1', String(line_start_x))
-    line.setAttribute('y1', String(line_start_y))
-    line.setAttribute('x2', String(line_end_x))
-    line.setAttribute('y2', String(line_end_y))
-    line.setAttribute('stroke', (node_dot_center_y < 0 || node_dot_center_y > effectiveSvgHeight.value) ? '#777' : '#ffffff')
-    line.setAttribute('stroke-width', '1')
+    line.setAttribute('x1', String(lineStartX))
+    line.setAttribute('y1', String(lineStartY))
+    line.setAttribute('x2', String(lineEndX))
+    line.setAttribute('y2', String(lineEndY))
+    line.setAttribute('stroke', '#ccc')
+    line.setAttribute('stroke-width', '2.5')
     svg.appendChild(line)
 
-    // Draw Text for node name
-    const nameText = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-    nameText.setAttribute('x', String(text_center_x))
-    nameText.setAttribute('y', String(text_center_y))
+    // 文字中心点
+    const textCenterX = nodeCenterX + textDirectionMultiplier * (nodeDotRadius + lineLength + lineToTextGap) * Math.cos(angleRad)
+    const textCenterY = nodeCenterY + textDirectionMultiplier * (nodeDotRadius + lineLength + lineToTextGap) * Math.sin(angleRad)
 
-    // Rotate text to be perpendicular to the radius (tangential)
-    const textRotationAngleDeg = (angle_rad_node + Math.PI / 2) * (180 / Math.PI)
-    nameText.setAttribute('transform', `rotate(${textRotationAngleDeg}, ${text_center_x}, ${text_center_y})`)
+    const textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+    textElement.setAttribute('x', String(textCenterX))
+    textElement.setAttribute('y', String(textCenterY))
 
-    nameText.setAttribute('text-anchor', 'middle')
-    nameText.setAttribute('dy', '0.35em') // Approximate vertical centering
-    nameText.setAttribute('fill', (node_dot_center_y < 0 || node_dot_center_y > effectiveSvgHeight.value) ? '#777' : '#ffffff')
-    nameText.setAttribute('font-size', '10')
-    nameText.textContent = nodeNameText
-    svg.appendChild(nameText)
+    // 文字旋转使其与径向线垂直 (切向)
+    const textRotationDeg = angleRad * (180 / Math.PI) + 90 // 转换为度并加90度
+    textElement.setAttribute('transform', `rotate(${textRotationDeg}, ${textCenterX}, ${textCenterY})`)
+
+    textElement.setAttribute('text-anchor', 'middle')
+    textElement.setAttribute('dy', '0.35em') // 近似垂直居中
+    textElement.setAttribute('fill', '#fff')
+    textElement.setAttribute('font-size', '10px')
+    textElement.setAttribute('font-family', 'sans-serif')
+    textElement.textContent = eventName
+    svg.appendChild(textElement)
   }
 }
 
@@ -163,21 +193,34 @@ watch(
     props.timestamps,
     props.nodeNames,
     props.missionDuration,
+    props.currentTimeOffset, // 关键：监听此项以实现动态更新
     effectiveSvgWidth.value,
     effectiveSvgHeight.value,
   ],
   () => {
     plotNodesOnCircle()
   },
-  { deep: true },
+  { deep: true, immediate: false }, // immediate:false 避免与onMounted重复调用，deep用于数组/对象
 )
 </script>
 
 <template>
   <div class="canvas_wrapper">
-    <div data-angle="0" class="flex justify-center">
+    <div class="flex justify-center">
       <!-- eslint-disable-next-line vue/html-self-closing -->
-      <svg ref="svgEl" :width="svgWidth" :height="svgHeight"></svg>
+      <svg ref="svgEl" :width="effectiveSvgWidth" :height="effectiveSvgHeight"></svg>
     </div>
   </div>
 </template>
+
+<style lang="css" scoped>
+.canvas_wrapper {
+  background: #111;
+  color: #fff;
+  box-shadow: 0 0 0 100vmax #111;
+  clip-path: inset(0 -100vmax);
+  height: 200px; /* This might be dynamic or better handled */
+  overflow: hidden;
+  position: relative;
+}
+</style>

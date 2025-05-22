@@ -36,38 +36,3 @@ a:hover, a:active, a:focus {
     filter: invert(1); /* uno: dark:invert */
   }
 }
-
-/* Specific styles from page.module.css that are complex or structural */
-/* Consider moving to component styles or UnoCSS if simple enough */
-
-.timeline_wrapper {
-    background: #111;
-    color: #fff;
-    box-shadow: 0 0 0 100vmax #111;
-    clip-path: inset(0 -100vmax);
-    padding: 50px 0;
-    height: 200px; /* This might be dynamic or better handled */
-    overflow: hidden;
-    position: relative;
-}
-
-.canvas_wrapper {
-    background: #111;
-    color: #fff;
-    box-shadow: 0 0 0 100vmax #111;
-    clip-path: inset(0 -100vmax);
-    height: 200px; /* This might be dynamic or better handled */
-    overflow: hidden;
-    position: relative;
-}
-
-#mySvg {
-    /* transform: rotate(180deg); SVG rotation will be handled dynamically */
-    transition: all 1ms; /* Potentially remove if Vue handles transitions */
-    position: absolute;
-    top: 50px; /* This will depend on parent dimensions */
-    left: 0;
-}
-#mySvg * {
-    transition: all 1ms; /* Potentially remove */
-}

@@ -1,5 +1,6 @@
 packages: []
 
+catalog:
 catalogs:
   build:
     '@nuxt/devtools': ^2.4.1
@@ -24,9 +25,10 @@ catalogs:
 
   frontend:
     '@vueuse/core': ^13.2.0
+    es-toolkit: ^1.38.0
+
     pinia: ^3.0.2
     vue: ^3.5.14
-
   icons:
     '@iconify-json/carbon': ^1.2.8
     '@iconify-json/twemoji': ^1.2.2
