@@ -17,7 +17,7 @@
     "@antfu/eslint-config": "catalog:dev",
     "@iconify-json/carbon": "catalog:icons",
     "@iconify-json/twemoji": "catalog:icons",
-    "@nuxt/devtools": "catalog:build",
+    "@nuxt/devtools": "^2.4.1",
     "@nuxt/eslint": "catalog:build",
     "@nuxtjs/color-mode": "catalog:build",
     "@pinia/nuxt": "catalog:build",
