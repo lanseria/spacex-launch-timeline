@@ -35,7 +35,7 @@ const {
 
     <div class="mx-auto my-8 gap-4 grid grid-cols-3 w-1200px justify-center">
       <!-- 卡片 1: 添加事件 -->
-      <div class="p-6 border border-gray-200 rounded-lg max-w-full dark:border-gray-700">
+      <div class="p-6 border border-gray-200 rounded-lg bg-black/50 max-w-full dark:border-gray-700">
         <h2 class="text-lg font-semibold mb-4">
           添加事件 (单位: 秒)
         </h2>
@@ -75,7 +75,7 @@ const {
       </div>
 
       <!-- 卡片 2: 控制 & SVG总时长 -->
-      <div class="p-6 border border-gray-200 rounded-lg flex-1 max-w-full dark:border-gray-700">
+      <div class="p-6 border border-gray-200 rounded-lg bg-black/50 flex-1 max-w-full dark:border-gray-700">
         <h2 class="text-lg font-semibold mb-2">
           控制
         </h2>
@@ -105,7 +105,7 @@ const {
       </div>
 
       <!-- 卡片 3: 发射倒计时起点 -->
-      <div class="p-6 border border-gray-200 rounded-lg max-w-full dark:border-gray-700">
+      <div class="p-6 border border-gray-200 rounded-lg bg-black/50 max-w-full dark:border-gray-700">
         <h2 class="text-lg font-semibold mb-2">
           发射倒计时起点 (秒)
         </h2>
@@ -124,9 +124,14 @@ const {
 
     <!-- 计时器时钟显示 -->
     <div
-      class="text-4xl text-white font-mono mx-auto my-8 p-4 text-center rounded-lg bg-gray-800 max-w-md shadow-lg dark:bg-black"
+      class="text-4xl text-white font-mono mx-auto text-center rounded-lg max-w-md bottom-36px left-1/2 absolute z-100 -translate-x-1/2"
     >
       {{ timerClock }}
+    </div>
+    <div
+      class="text-sm text-gray-500 font-bold mx-auto text-center rounded-lg max-w-md bottom-20px left-1/2 absolute z-100 -translate-x-1/2"
+    >
+      STARLINK
     </div>
 
     <!-- SVG 时间线可视化 -->

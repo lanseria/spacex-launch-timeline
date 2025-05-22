@@ -225,6 +225,7 @@ function plotNodesOnCircle() {
     textElement.setAttribute('fill', '#fff')
     textElement.setAttribute('font-size', '10px')
     textElement.setAttribute('font-family', 'sans-serif')
+    textElement.setAttribute('font-weight', 'bold')
     textElement.textContent = eventName
     svg.appendChild(textElement)
   }
