@@ -24,10 +24,17 @@ export default mergeConfigs([config, {
     }),
     presetTypography(),
     presetWebFonts({
+      themeKey: 'font',
       fonts: {
         sans: 'DM Sans',
         serif: 'DM Serif Display',
-        mono: 'Roboto Mono',
+        mono: 'DM Mono',
+        saira: [
+          {
+            name: 'Saira',
+            weights: ['200', '400', '700'],
+          },
+        ],
       },
       processors: createLocalFontProcessor(),
     }),

@@ -56,7 +56,7 @@ function plotNodesOnCircle() {
 
   const innerArcFillColor = 'rgba(0, 0, 0, 0.7)' // Black with 30% opacity for inner arc fill
   const innerArcStrokeColor = '#808080' // Grey for inner arc stroke
-  const innerArcStrokeWidth = '1' // Stroke width for inner arc
+  const innerArcStrokeWidth = '2' // Stroke width for inner arc
 
   const outerArcFillColor = 'rgba(0, 0, 0, 0.3)' // Black with 10% opacity for outer arc fill
 
@@ -94,14 +94,14 @@ function plotNodesOnCircle() {
     svg.appendChild(innerArcPath)
   }
 
-  // 主指示圆弧
+  // 3. 主指示圆弧
   const mainArc = document.createElementNS('http://www.w3.org/2000/svg', 'path')
   const x1 = currentCircleCenterX + arcRadius * Math.cos(startAngle)
   const y1 = currentCircleCenterY + arcRadius * Math.sin(startAngle)
   const x2 = currentCircleCenterX + arcRadius * Math.cos(endAngle)
   const y2 = currentCircleCenterY + arcRadius * Math.sin(endAngle)
   mainArc.setAttribute('d', `M ${x1} ${y1} A ${arcRadius} ${arcRadius} 0 0 1 ${x2} ${y2}`)
-  mainArc.setAttribute('stroke', '#FFFFFF90')
+  mainArc.setAttribute('stroke', '#FFFFFF')
   mainArc.setAttribute('stroke-width', '2')
   mainArc.setAttribute('fill', 'none')
   svg.appendChild(mainArc)
@@ -130,10 +130,10 @@ function plotNodesOnCircle() {
   // missionDuration 是 SVG 圆周所代表的总时间。T-0 (NOW) 在顶部中心。
   // 节点根据其 (eventTime - currentTimelineTime) 的值来定位。
   const halfMissionDuration = props.missionDuration / 2
-  const nodeDotRadius = 5
-  const nodeOuterRadius = 5 // 外圆圈的半径
-  const nodeInnerDotRadiusSmall = 2.5 // 过去事件的内点半径
-  const nodeInnerDotRadiusLarge = 3// 接近NOW标记的内点半径 (高亮)
+  const nodeDotRadius = 6
+  const nodeOuterRadius = 6 // 外圆圈的半径
+  const nodeInnerDotRadiusSmall = 3 // 过去事件的内点半径
+  const nodeInnerDotRadiusLarge = 3.5// 接近NOW标记的内点半径 (高亮)
 
   const textOffsetFromNodeEdge = 18
   const lineToTextGap = 7
@@ -224,8 +224,8 @@ function plotNodesOnCircle() {
     textElement.setAttribute('dy', '0.35em') // 近似垂直居中
     textElement.setAttribute('fill', '#fff')
     textElement.setAttribute('font-size', '10px')
-    textElement.setAttribute('font-family', 'sans-serif')
-    textElement.setAttribute('font-weight', 'bold')
+    textElement.setAttribute('font-family', 'Saira')
+    textElement.setAttribute('font-weight', '400')
     textElement.textContent = eventName
     svg.appendChild(textElement)
   }

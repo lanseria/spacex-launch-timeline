@@ -123,15 +123,17 @@ const {
     </div>
 
     <!-- 计时器时钟显示 -->
-    <div
-      class="text-4xl text-white font-mono mx-auto text-center rounded-lg max-w-md bottom-36px left-1/2 absolute z-100 -translate-x-1/2"
-    >
-      {{ timerClock }}
-    </div>
-    <div
-      class="text-sm text-gray-500 font-bold mx-auto text-center rounded-lg max-w-md bottom-20px left-1/2 absolute z-100 -translate-x-1/2"
-    >
-      STARLINK
+    <div class="font-400 font-saira mx-auto text-center max-w-md bottom-20px left-1/2 absolute z-100 -translate-x-1/2">
+      <div
+        class="countdown text-4xl text-white"
+      >
+        {{ timerClock }}
+      </div>
+      <div
+        class="text-sm text-gray-400"
+      >
+        STARLINK
+      </div>
     </div>
 
     <!-- SVG 时间线可视化 -->
@@ -147,6 +149,9 @@ const {
 </template>
 
 <style scoped>
+.countdown {
+  font-variant-numeric: tabular-nums;
+}
 .input-field {
   @apply block px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:focus:ring-offset-gray-900 dark:focus:border-indigo-400;
 }
@@ -161,7 +166,7 @@ const {
 
 .node_list_scrollbar::-webkit-scrollbar {
   -webkit-appearance: none;
-  width: 8px;
+  width: 1px;
 }
 
 .node_list_scrollbar::-webkit-scrollbar-thumb {
