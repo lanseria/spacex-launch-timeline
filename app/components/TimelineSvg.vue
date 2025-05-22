@@ -7,6 +7,8 @@ const props = defineProps<{
   currentTimeOffset?: number // 当前时间偏移量 (秒), 从T-0开始计算。T-60s时为-60, T+10s时为10。
   svgWidth?: number
   svgHeight?: number
+  pastNodeDensityFactor?: number // New: Density for past nodes (e.g., 1.0 default, 2.0 for twice as dense)
+  futureNodeDensityFactor?: number // New: Density for future nodes
 }>()
 
 const svgEl = ref<SVGElement | null>(null)
@@ -43,7 +45,7 @@ function plotNodesOnCircle() {
 
   // --- Configuration for new decorative arcs ---
 
-  const arcRadius = currentCircleRadius
+  const mainArcRadius = currentCircleRadius
   // 定义圆弧的起点和终点角度（例如，覆盖整个SVG宽度）
   const angleSpan = Math.PI / 2 // 决定圆弧的张开程度
   const startAngle = -Math.PI / 2 - angleSpan / 2
@@ -96,11 +98,11 @@ function plotNodesOnCircle() {
 
   // 3. 主指示圆弧
   const mainArc = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-  const x1 = currentCircleCenterX + arcRadius * Math.cos(startAngle)
-  const y1 = currentCircleCenterY + arcRadius * Math.sin(startAngle)
-  const x2 = currentCircleCenterX + arcRadius * Math.cos(endAngle)
-  const y2 = currentCircleCenterY + arcRadius * Math.sin(endAngle)
-  mainArc.setAttribute('d', `M ${x1} ${y1} A ${arcRadius} ${arcRadius} 0 0 1 ${x2} ${y2}`)
+  const x1 = currentCircleCenterX + mainArcRadius * Math.cos(startAngle)
+  const y1 = currentCircleCenterY + mainArcRadius * Math.sin(startAngle)
+  const x2 = currentCircleCenterX + mainArcRadius * Math.cos(endAngle)
+  const y2 = currentCircleCenterY + mainArcRadius * Math.sin(endAngle)
+  mainArc.setAttribute('d', `M ${x1} ${y1} A ${mainArcRadius} ${mainArcRadius} 0 0 1 ${x2} ${y2}`)
   mainArc.setAttribute('stroke', '#FFFFFF')
   mainArc.setAttribute('stroke-width', '2')
   mainArc.setAttribute('fill', 'none')
@@ -113,18 +115,9 @@ function plotNodesOnCircle() {
   markerLine.setAttribute('y1', String(markLineY - 3))
   markerLine.setAttribute('x2', String(currentCircleCenterX))
   markerLine.setAttribute('y2', String(markLineY + 3))
-  markerLine.setAttribute('stroke', '#FFF') // 亮蓝色标记
+  markerLine.setAttribute('stroke', '#FFF')
   markerLine.setAttribute('stroke-width', '2')
   svg.appendChild(markerLine)
-
-  // const markerText = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-  // markerText.setAttribute('x', String(currentCircleCenterX + 8))
-  // markerText.setAttribute('y', String(12))
-  // markerText.setAttribute('fill', '#00c0ff')
-  // markerText.setAttribute('font-size', '10px')
-  // markerText.setAttribute('font-family', 'monospace')
-  // markerText.textContent = 'NOW'
-  // svg.appendChild(markerText)
 
   const numEvents = props.timestamps.length
   // missionDuration 是 SVG 圆周所代表的总时间。T-0 (NOW) 在顶部中心。
@@ -137,15 +130,47 @@ function plotNodesOnCircle() {
 
   const textOffsetFromNodeEdge = 18
   const lineToTextGap = 7
+  // --- Density and Animation Logic ---
+  // Ensure density factors are at least a small positive number to avoid division by zero or extreme negative scaling
+  const safePastDensityFactor = Math.max(0.1, props.pastNodeDensityFactor ?? 1.0)
+  const safeFutureDensityFactor = Math.max(0.1, props.futureNodeDensityFactor ?? 1.0)
 
+  let effectivePastDensityToUse = safePastDensityFactor
+  const animationStartTime = -20 // Start animation at T-20s
+  const animationDuration = 5 // Animation lasts 5 seconds
+  const animationEndTime = animationStartTime + animationDuration // T-15s
+
+  if (currentTimelineTime >= animationStartTime && currentTimelineTime <= animationEndTime) {
+    const progress = (currentTimelineTime - animationStartTime) / animationDuration
+    // Interpolate the past density factor from its original to the future density factor
+    effectivePastDensityToUse = safePastDensityFactor * (1 - progress) + safeFutureDensityFactor * progress
+  }
+  else if (currentTimelineTime > animationEndTime) {
+    // After the animation window, the "past" events adopt the "future" density characteristic
+    effectivePastDensityToUse = safeFutureDensityFactor
+  }
+  // If currentTimelineTime < animationStartTime, effectivePastDensityToUse remains safePastDensityFactor
   for (let i = 0; i < numEvents; i++) {
     const eventAbsoluteTime = props.timestamps[i]!
     const eventName = props.nodeNames[i] || `事件 ${i + 1}`
     const timeRelativeToNow = eventAbsoluteTime - currentTimelineTime
-    const angleRad = (timeRelativeToNow / halfMissionDuration) * Math.PI - (Math.PI / 2)
 
-    const nodeCenterX = currentCircleCenterX + currentCircleRadius * Math.cos(angleRad)
-    const nodeCenterY = currentCircleCenterY + currentCircleRadius * Math.sin(angleRad)
+    let applicableDensityFactor
+    if (timeRelativeToNow < 0) {
+      applicableDensityFactor = effectivePastDensityToUse
+    }
+    else {
+      applicableDensityFactor = safeFutureDensityFactor
+    }
+
+    // Calculate angular position with density factor
+    // The base angular spread for a time unit: (timeRelativeToNow / halfMissionDuration) * Math.PI
+    // We divide by density factor: higher density factor means smaller angle (more compressed)
+    const angularOffset = ((timeRelativeToNow / halfMissionDuration) * Math.PI) / applicableDensityFactor
+    const angleRad = angularOffset - (Math.PI / 2) // Offset to make T-0 at the top
+
+    const nodeCenterX = currentCircleCenterX + mainArcRadius * Math.cos(angleRad) // Nodes on mainArcRadius
+    const nodeCenterY = currentCircleCenterY + mainArcRadius * Math.sin(angleRad)
 
     const isVisibleVertically = nodeCenterY >= -nodeOuterRadius && nodeCenterY <= effectiveSvgHeight.value + nodeOuterRadius
     if (!isVisibleVertically)
@@ -167,8 +192,7 @@ function plotNodesOnCircle() {
       innerDotActive.setAttribute('cx', String(nodeCenterX))
       innerDotActive.setAttribute('cy', String(nodeCenterY))
       innerDotActive.setAttribute('r', String(nodeInnerDotRadiusLarge))
-      innerDotActive.setAttribute('fill', '#FFF') // 高亮颜色 (例如亮蓝色)
-      // innerDotActive.setAttribute('stroke', 'none'); // 通常不需要描边
+      innerDotActive.setAttribute('fill', '#FFF')
       svg.appendChild(innerDotActive)
     }
     else if (timeRelativeToNow < -2) { // 过去事件 (早于-2秒)
@@ -176,8 +200,7 @@ function plotNodesOnCircle() {
       innerDotPast.setAttribute('cx', String(nodeCenterX))
       innerDotPast.setAttribute('cy', String(nodeCenterY))
       innerDotPast.setAttribute('r', String(nodeInnerDotRadiusSmall))
-      innerDotPast.setAttribute('fill', '#FFF') // 白色实心点
-      // innerDotPast.setAttribute('stroke', 'none');
+      innerDotPast.setAttribute('fill', '#FFF')
       svg.appendChild(innerDotPast)
     }
     // 对于 timeRelativeToNow > 2 (未来事件)，不绘制内部点，保持为空心圆圈
@@ -240,9 +263,11 @@ watch(
     props.timestamps,
     props.nodeNames,
     props.missionDuration,
-    props.currentTimeOffset, // 关键：监听此项以实现动态更新
+    props.currentTimeOffset,
     effectiveSvgWidth.value,
     effectiveSvgHeight.value,
+    props.pastNodeDensityFactor, // Watch new props
+    props.futureNodeDensityFactor, // Watch new props
   ],
   () => {
     plotNodesOnCircle()
