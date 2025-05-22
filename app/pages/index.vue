@@ -33,26 +33,26 @@ const {
       </p>
     </div>
 
-    <div class="mx-auto my-8 gap-4 grid grid-cols-1 w-1200px justify-center md:grid-cols-3">
+    <div class="mx-auto my-8 gap-4 grid grid-cols-3 w-1200px justify-center">
       <!-- 卡片 1: 添加事件 -->
       <div class="p-6 border border-gray-200 rounded-lg max-w-full dark:border-gray-700">
         <h2 class="text-lg font-semibold mb-4">
           添加事件 (单位: 秒)
         </h2>
-        <div class="node_list_scrollbar pr-2 max-h-[200px] overflow-y-auto">
+        <div class="node_list_scrollbar max-h-[200px] overflow-y-auto">
           <div v-for="(timestamp, i) in timestamps" :key="i" class="mb-2 flex items-center space-x-2">
             <input
               v-model.number="timestamps[i]"
               type="number"
               placeholder="例如: -60, 0, 120"
-              class="input-field flex-grow dark:text-white dark:bg-gray-700"
+              class="input-field flex-grow w-80px dark:text-white dark:bg-gray-700"
               :aria-label="`事件 ${i + 1} 的时间戳 (秒)`"
             >
             <input
               v-model="nodeNames[i]"
               type="text"
               placeholder="事件名称"
-              class="input-field flex-grow dark:text-white dark:bg-gray-700"
+              class="input-field flex-grow w-full dark:text-white dark:bg-gray-700"
               :aria-label="`事件 ${i + 1} 的名称`"
             >
             <button
@@ -143,7 +143,7 @@ const {
 
 <style scoped>
 .input-field {
-  @apply block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:focus:ring-offset-gray-900 dark:focus:border-indigo-400;
+  @apply block px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:focus:ring-offset-gray-900 dark:focus:border-indigo-400;
 }
 
 .btn-action {
@@ -156,11 +156,11 @@ const {
 
 .node_list_scrollbar::-webkit-scrollbar {
   -webkit-appearance: none;
-  width: 10px;
+  width: 8px;
 }
 
 .node_list_scrollbar::-webkit-scrollbar-thumb {
-  border-radius: 5px;
+  border-radius: 4px;
   background-color: rgba(0, 0, 0, 0.5);
   -webkit-box-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
 }

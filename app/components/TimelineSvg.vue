@@ -28,7 +28,6 @@ const distCenterToChord = computed(() => {
 // 如果圆心 (cx, R)，则圆弧顶部在 (cx, 0)，SVG y轴向下为正。
 const circleCenterY = computed(() => props.svgHeight! + distCenterToChord.value)
 const circleCenterX = computed(() => effectiveSvgWidth.value / 2)
-
 function plotNodesOnCircle() {
   const svg = svgEl.value
   if (!svg)
@@ -42,15 +41,61 @@ function plotNodesOnCircle() {
 
   svg.innerHTML = '' // 清除旧内容
 
-  // 主指示圆弧 (仅绘制可见部分，或绘制完整圆作为参考)
-  // 为了简化，我们仅绘制节点，背景圆弧可以省略或用CSS伪元素模拟
-  // 若要绘制参考圆弧:
-  const mainArc = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+  // --- Configuration for new decorative arcs ---
+
   const arcRadius = currentCircleRadius
   // 定义圆弧的起点和终点角度（例如，覆盖整个SVG宽度）
   const angleSpan = Math.PI / 2 // 决定圆弧的张开程度
   const startAngle = -Math.PI / 2 - angleSpan / 2
   const endAngle = -Math.PI / 2 + angleSpan / 2
+  // For SVG arc path: large-arc-flag=0 (arc span < 180deg), sweep-flag=1 (positive angle direction)
+  const arcDrawingFlags = '0 0 1'
+
+  const innerArcOffsetFromMain = 40 // Configurable: Distance *inside* the main arc
+  const outerArcOffsetFromMain = 40 // Configurable: Distance *outside* the main arc
+
+  const innerArcFillColor = 'rgba(0, 0, 0, 0.7)' // Black with 30% opacity for inner arc fill
+  const innerArcStrokeColor = '#808080' // Grey for inner arc stroke
+  const innerArcStrokeWidth = '1' // Stroke width for inner arc
+
+  const outerArcFillColor = 'rgba(0, 0, 0, 0.3)' // Black with 10% opacity for outer arc fill
+
+  // 1. Outer Decorative Arc (black fill, 10% transparent)
+  // This arc is drawn as a filled segment (arc path closed with 'Z').
+  const outerDecoArcRadius = currentCircleRadius + outerArcOffsetFromMain
+  if (outerDecoArcRadius > 0) { // Ensure radius is positive
+    const x1_outer = currentCircleCenterX + outerDecoArcRadius * Math.cos(startAngle)
+    const y1_outer = currentCircleCenterY + outerDecoArcRadius * Math.sin(startAngle)
+    const x2_outer = currentCircleCenterX + outerDecoArcRadius * Math.cos(endAngle)
+    const y2_outer = currentCircleCenterY + outerDecoArcRadius * Math.sin(endAngle)
+
+    const outerArcPath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    // 'Z' closes the path by drawing a line from end to start, allowing fill of the segment.
+    outerArcPath.setAttribute('d', `M ${x1_outer} ${y1_outer} A ${outerDecoArcRadius} ${outerDecoArcRadius} ${arcDrawingFlags} ${x2_outer} ${y2_outer} Z`)
+    outerArcPath.setAttribute('fill', outerArcFillColor)
+    outerArcPath.setAttribute('stroke', 'none') // No stroke for the outer decorative arc
+    svg.appendChild(outerArcPath)
+  }
+
+  // 2. Inner Decorative Arc (grey stroke, black fill with custom transparency)
+  // This arc is also drawn as a filled segment.
+  const innerDecoArcRadius = currentCircleRadius - innerArcOffsetFromMain
+  if (innerDecoArcRadius > 0) { // Ensure radius is positive
+    const x1_inner = currentCircleCenterX + innerDecoArcRadius * Math.cos(startAngle)
+    const y1_inner = currentCircleCenterY + innerDecoArcRadius * Math.sin(startAngle)
+    const x2_inner = currentCircleCenterX + innerDecoArcRadius * Math.cos(endAngle)
+    const y2_inner = currentCircleCenterY + innerDecoArcRadius * Math.sin(endAngle)
+
+    const innerArcPath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    innerArcPath.setAttribute('d', `M ${x1_inner} ${y1_inner} A ${innerDecoArcRadius} ${innerDecoArcRadius} ${arcDrawingFlags} ${x2_inner} ${y2_inner} Z`)
+    innerArcPath.setAttribute('fill', innerArcFillColor)
+    innerArcPath.setAttribute('stroke', innerArcStrokeColor)
+    innerArcPath.setAttribute('stroke-width', innerArcStrokeWidth)
+    svg.appendChild(innerArcPath)
+  }
+
+  // 主指示圆弧
+  const mainArc = document.createElementNS('http://www.w3.org/2000/svg', 'path')
   const x1 = currentCircleCenterX + arcRadius * Math.cos(startAngle)
   const y1 = currentCircleCenterY + arcRadius * Math.sin(startAngle)
   const x2 = currentCircleCenterX + arcRadius * Math.cos(endAngle)
@@ -63,22 +108,23 @@ function plotNodesOnCircle() {
 
   // "当前时间" 标记线 (垂直线在SVG顶部中心)
   const markerLine = document.createElementNS('http://www.w3.org/2000/svg', 'line')
+  const markLineY = currentCircleCenterY - currentCircleRadius
   markerLine.setAttribute('x1', String(currentCircleCenterX))
-  markerLine.setAttribute('y1', String(0))
+  markerLine.setAttribute('y1', String(markLineY - 3))
   markerLine.setAttribute('x2', String(currentCircleCenterX))
-  markerLine.setAttribute('y2', String(15))
-  markerLine.setAttribute('stroke', '#00c0ff') // 亮蓝色标记
-  markerLine.setAttribute('stroke-width', '3')
+  markerLine.setAttribute('y2', String(markLineY + 3))
+  markerLine.setAttribute('stroke', '#FFF') // 亮蓝色标记
+  markerLine.setAttribute('stroke-width', '2')
   svg.appendChild(markerLine)
 
-  const markerText = document.createElementNS('http://www.w3.org/2000/svg', 'text')
-  markerText.setAttribute('x', String(currentCircleCenterX + 8))
-  markerText.setAttribute('y', String(12))
-  markerText.setAttribute('fill', '#00c0ff')
-  markerText.setAttribute('font-size', '10px')
-  markerText.setAttribute('font-family', 'monospace')
-  markerText.textContent = 'NOW'
-  svg.appendChild(markerText)
+  // const markerText = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+  // markerText.setAttribute('x', String(currentCircleCenterX + 8))
+  // markerText.setAttribute('y', String(12))
+  // markerText.setAttribute('fill', '#00c0ff')
+  // markerText.setAttribute('font-size', '10px')
+  // markerText.setAttribute('font-family', 'monospace')
+  // markerText.textContent = 'NOW'
+  // svg.appendChild(markerText)
 
   const numEvents = props.timestamps.length
   // missionDuration 是 SVG 圆周所代表的总时间。T-0 (NOW) 在顶部中心。
@@ -215,12 +261,12 @@ watch(
 
 <style lang="css" scoped>
 .canvas_wrapper {
-  background: #111;
+  background: #00000000;
   color: #fff;
-  box-shadow: 0 0 0 100vmax #111;
   clip-path: inset(0 -100vmax);
   height: 200px; /* This might be dynamic or better handled */
   overflow: hidden;
-  position: relative;
+  position: absolute;
+  bottom: 0;
 }
 </style>
