@@ -11,14 +11,13 @@ const props = defineProps<{
   futureNodeDensityFactor?: number // New: Density for future nodes
 }>()
 
-const svgEl = ref<SVGElement | null>(null)
+const svgEl = useTemplateRef('svgEl')
 
 const effectiveSvgWidth = computed(() => props.svgWidth || 1200)
 const effectiveSvgHeight = computed(() => props.svgHeight || 200)
 
 // --- 圆弧几何配置 ---
-// 圆弧半径，这里我们让它与SVG视口宽度相关，可以调整比例系数来改变曲率
-const exposedArcAngleDeg = 60 // The desired visible arc at the top of the SVG in degrees
+const exposedArcAngleDeg = 60
 const exposedArcAngleRad = exposedArcAngleDeg * (Math.PI / 180)
 
 const circleRadius = computed(() => effectiveSvgWidth.value / 2)
@@ -26,10 +25,11 @@ const circleRadius = computed(() => effectiveSvgWidth.value / 2)
 const distCenterToChord = computed(() => {
   return circleRadius.value * Math.cos(exposedArcAngleRad / 2)
 })
-// 圆心Y坐标。我们希望圆弧的顶部（对应T-0或当前时间）在SVG视口的y=0附近。
-// 如果圆心 (cx, R)，则圆弧顶部在 (cx, 0)，SVG y轴向下为正。
-const circleCenterY = computed(() => props.svgHeight! + distCenterToChord.value)
+
+// Using effectiveSvgHeight for robustness as it includes the default
+const circleCenterY = computed(() => effectiveSvgHeight.value + distCenterToChord.value)
 const circleCenterX = computed(() => effectiveSvgWidth.value / 2)
+
 function plotNodesOnCircle() {
   const svg = svgEl.value
   if (!svg)
@@ -38,56 +38,44 @@ function plotNodesOnCircle() {
   const currentCircleRadius = circleRadius.value
   const currentCircleCenterX = circleCenterX.value
   const currentCircleCenterY = circleCenterY.value
-  // currentTimeOffset: T-60s时值为-60, T-0时为0, T+60s时为60
   const currentTimelineTime = props.currentTimeOffset ?? 0
 
   svg.innerHTML = '' // 清除旧内容
 
-  // --- Configuration for new decorative arcs ---
-
   const mainArcRadius = currentCircleRadius
-  // 定义圆弧的起点和终点角度（例如，覆盖整个SVG宽度）
-  const angleSpan = Math.PI / 2 // 决定圆弧的张开程度
+  const angleSpan = Math.PI / 2
   const startAngle = -Math.PI / 2 - angleSpan / 2
   const endAngle = -Math.PI / 2 + angleSpan / 2
-  // For SVG arc path: large-arc-flag=0 (arc span < 180deg), sweep-flag=1 (positive angle direction)
   const arcDrawingFlags = '0 0 1'
 
-  const innerArcOffsetFromMain = 40 // Configurable: Distance *inside* the main arc
-  const outerArcOffsetFromMain = 40 // Configurable: Distance *outside* the main arc
+  const innerArcOffsetFromMain = 40
+  const outerArcOffsetFromMain = 40
+  const innerArcFillColor = 'rgba(0, 0, 0, 0.7)'
+  const innerArcStrokeColor = '#808080'
+  const innerArcStrokeWidth = '2'
+  const outerArcFillColor = 'rgba(0, 0, 0, 0.3)'
 
-  const innerArcFillColor = 'rgba(0, 0, 0, 0.7)' // Black with 30% opacity for inner arc fill
-  const innerArcStrokeColor = '#808080' // Grey for inner arc stroke
-  const innerArcStrokeWidth = '2' // Stroke width for inner arc
-
-  const outerArcFillColor = 'rgba(0, 0, 0, 0.3)' // Black with 10% opacity for outer arc fill
-
-  // 1. Outer Decorative Arc (black fill, 10% transparent)
-  // This arc is drawn as a filled segment (arc path closed with 'Z').
+  // 1. Outer Decorative Arc
   const outerDecoArcRadius = currentCircleRadius + outerArcOffsetFromMain
-  if (outerDecoArcRadius > 0) { // Ensure radius is positive
+  if (outerDecoArcRadius > 0) {
     const x1_outer = currentCircleCenterX + outerDecoArcRadius * Math.cos(startAngle)
     const y1_outer = currentCircleCenterY + outerDecoArcRadius * Math.sin(startAngle)
     const x2_outer = currentCircleCenterX + outerDecoArcRadius * Math.cos(endAngle)
     const y2_outer = currentCircleCenterY + outerDecoArcRadius * Math.sin(endAngle)
-
     const outerArcPath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-    // 'Z' closes the path by drawing a line from end to start, allowing fill of the segment.
     outerArcPath.setAttribute('d', `M ${x1_outer} ${y1_outer} A ${outerDecoArcRadius} ${outerDecoArcRadius} ${arcDrawingFlags} ${x2_outer} ${y2_outer} Z`)
     outerArcPath.setAttribute('fill', outerArcFillColor)
-    outerArcPath.setAttribute('stroke', 'none') // No stroke for the outer decorative arc
+    outerArcPath.setAttribute('stroke', 'none')
     svg.appendChild(outerArcPath)
   }
 
-  // 2. Inner Decorative Arc (grey stroke, black fill with custom transparency)
-  // This arc is also drawn as a filled segment.
+  // 2. Inner Decorative Arc
   const innerDecoArcRadius = currentCircleRadius - innerArcOffsetFromMain
-  if (innerDecoArcRadius > 0) { // Ensure radius is positive
+  if (innerDecoArcRadius > 0) {
     const x1_inner = currentCircleCenterX + innerDecoArcRadius * Math.cos(startAngle)
     const y1_inner = currentCircleCenterY + innerDecoArcRadius * Math.sin(startAngle)
     const x2_inner = currentCircleCenterX + innerDecoArcRadius * Math.cos(endAngle)
     const y2_inner = currentCircleCenterY + innerDecoArcRadius * Math.sin(endAngle)
-
     const innerArcPath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
     innerArcPath.setAttribute('d', `M ${x1_inner} ${y1_inner} A ${innerDecoArcRadius} ${innerDecoArcRadius} ${arcDrawingFlags} ${x2_inner} ${y2_inner} Z`)
     innerArcPath.setAttribute('fill', innerArcFillColor)
@@ -108,7 +96,7 @@ function plotNodesOnCircle() {
   mainArc.setAttribute('fill', 'none')
   svg.appendChild(mainArc)
 
-  // "当前时间" 标记线 (垂直线在SVG顶部中心)
+  // "当前时间" 标记线
   const markerLine = document.createElementNS('http://www.w3.org/2000/svg', 'line')
   const markLineY = currentCircleCenterY - currentCircleRadius
   markerLine.setAttribute('x1', String(currentCircleCenterX))
@@ -120,74 +108,83 @@ function plotNodesOnCircle() {
   svg.appendChild(markerLine)
 
   const numEvents = props.timestamps.length
-  // missionDuration 是 SVG 圆周所代表的总时间。T-0 (NOW) 在顶部中心。
-  // 节点根据其 (eventTime - currentTimelineTime) 的值来定位。
   const halfMissionDuration = props.missionDuration / 2
   const nodeDotRadius = 6
-  const nodeOuterRadius = 6 // 外圆圈的半径
-  const nodeInnerDotRadiusSmall = 3 // 过去事件的内点半径
-  const nodeInnerDotRadiusLarge = 3.5// 接近NOW标记的内点半径 (高亮)
+  const nodeOuterRadius = 6
+  const nodeInnerDotRadiusSmall = 3
+  const nodeInnerDotRadiusLarge = 3.5
 
   const textOffsetFromNodeEdge = 18
   const lineToTextGap = 7
+
   // --- Density and Animation Logic ---
-  // Ensure density factors are at least a small positive number to avoid division by zero or extreme negative scaling
   const safePastDensityFactor = Math.max(0.1, props.pastNodeDensityFactor ?? 1.0)
   const safeFutureDensityFactor = Math.max(0.1, props.futureNodeDensityFactor ?? 1.0)
 
-  let effectivePastDensityToUse = safePastDensityFactor
-  const animationStartTime = -20 // Start animation at T-20s
-  const animationDuration = 5 // Animation lasts 5 seconds
-  const animationEndTime = animationStartTime + animationDuration // T-15s
+  const animationStartTime = -7 // Start animation at T-7s
+  const animationDuration = 6 // Animation lasts 5 seconds
+  const animationEndTime = animationStartTime + animationDuration
 
+  // Determine the target density for events that are currently in the "past" slots
+  let targetDensityForPastSlots: number
   if (currentTimelineTime >= animationStartTime && currentTimelineTime <= animationEndTime) {
+    // During animation: interpolate from past density to future density
     const progress = (currentTimelineTime - animationStartTime) / animationDuration
-    // Interpolate the past density factor from its original to the future density factor
-    effectivePastDensityToUse = safePastDensityFactor * (1 - progress) + safeFutureDensityFactor * progress
+    targetDensityForPastSlots = safePastDensityFactor * (1 - progress) + safeFutureDensityFactor * progress
   }
   else if (currentTimelineTime > animationEndTime) {
-    // After the animation window, the "past" events adopt the "future" density characteristic
-    effectivePastDensityToUse = safeFutureDensityFactor
+    // After animation: past slots use future density
+    targetDensityForPastSlots = safeFutureDensityFactor
   }
-  // If currentTimelineTime < animationStartTime, effectivePastDensityToUse remains safePastDensityFactor
+  else { // currentTimelineTime < animationStartTime
+    // Before animation starts: past slots use the high past density
+    targetDensityForPastSlots = safePastDensityFactor
+  }
+
   for (let i = 0; i < numEvents; i++) {
     const eventAbsoluteTime = props.timestamps[i]!
     const eventName = props.nodeNames[i] || `事件 ${i + 1}`
     const timeRelativeToNow = eventAbsoluteTime - currentTimelineTime
 
-    let applicableDensityFactor
-    if (timeRelativeToNow < 0) {
-      applicableDensityFactor = effectivePastDensityToUse
+    let applicableDensityFactor: number
+
+    if (currentTimelineTime < animationStartTime) {
+      // ---- Behavior before -20s ----
+      // ALL nodes (regardless of being past or future relative to currentTimelineTime) use the high density factor.
+      applicableDensityFactor = safePastDensityFactor
     }
     else {
-      applicableDensityFactor = safeFutureDensityFactor
+      // ---- Behavior at or after -20s ----
+      // Density depends on whether the node is in the past or future *relative to currentTimelineTime*.
+      if (timeRelativeToNow < 0) { // Event is in the past
+        applicableDensityFactor = targetDensityForPastSlots
+      }
+      else { // Event is in the future or at NOW
+        applicableDensityFactor = safeFutureDensityFactor
+      }
     }
 
-    // Calculate angular position with density factor
-    // The base angular spread for a time unit: (timeRelativeToNow / halfMissionDuration) * Math.PI
-    // We divide by density factor: higher density factor means smaller angle (more compressed)
-    const angularOffset = ((timeRelativeToNow / halfMissionDuration) * Math.PI) / applicableDensityFactor
-    const angleRad = angularOffset - (Math.PI / 2) // Offset to make T-0 at the top
+    const angularOffsetBase = (timeRelativeToNow / halfMissionDuration) * Math.PI
+    const angularOffset = angularOffsetBase / applicableDensityFactor
+    const angleRad = angularOffset - (Math.PI / 2)
 
-    const nodeCenterX = currentCircleCenterX + mainArcRadius * Math.cos(angleRad) // Nodes on mainArcRadius
+    const nodeCenterX = currentCircleCenterX + mainArcRadius * Math.cos(angleRad)
     const nodeCenterY = currentCircleCenterY + mainArcRadius * Math.sin(angleRad)
 
     const isVisibleVertically = nodeCenterY >= -nodeOuterRadius && nodeCenterY <= effectiveSvgHeight.value + nodeOuterRadius
     if (!isVisibleVertically)
       continue
 
-    // 1. 绘制所有节点的白色外圆圈 (描边，无填充)
     const nodeOuterCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
     nodeOuterCircle.setAttribute('cx', String(nodeCenterX))
     nodeOuterCircle.setAttribute('cy', String(nodeCenterY))
     nodeOuterCircle.setAttribute('r', String(nodeOuterRadius))
-    nodeOuterCircle.setAttribute('fill', '#000') // 无填充
-    nodeOuterCircle.setAttribute('stroke', '#FFF') // 白色描边
-    nodeOuterCircle.setAttribute('stroke-width', '1.5') // 描边宽度
+    nodeOuterCircle.setAttribute('fill', '#000')
+    nodeOuterCircle.setAttribute('stroke', '#FFF')
+    nodeOuterCircle.setAttribute('stroke-width', '1.5')
     svg.appendChild(nodeOuterCircle)
 
-    // 2. 根据状态绘制内部的实心点
-    if (Math.abs(timeRelativeToNow) <= 2) { // 2秒内接近NOW标记
+    if (Math.abs(timeRelativeToNow) <= 2) {
       const innerDotActive = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
       innerDotActive.setAttribute('cx', String(nodeCenterX))
       innerDotActive.setAttribute('cy', String(nodeCenterY))
@@ -195,7 +192,7 @@ function plotNodesOnCircle() {
       innerDotActive.setAttribute('fill', '#FFF')
       svg.appendChild(innerDotActive)
     }
-    else if (timeRelativeToNow < -2) { // 过去事件 (早于-2秒)
+    else if (timeRelativeToNow < -2) {
       const innerDotPast = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
       innerDotPast.setAttribute('cx', String(nodeCenterX))
       innerDotPast.setAttribute('cy', String(nodeCenterY))
@@ -203,25 +200,17 @@ function plotNodesOnCircle() {
       innerDotPast.setAttribute('fill', '#FFF')
       svg.appendChild(innerDotPast)
     }
-    // 对于 timeRelativeToNow > 2 (未来事件)，不绘制内部点，保持为空心圆圈
 
-    // 绘制连接线和文字 (内外分布)
-    const isOutsideText = i % 2 === 0 // 交替内外放置文字
+    const isOutsideText = i % 2 === 0
     const textDirectionMultiplier = isOutsideText ? 1 : -1
-
-    // 线条起点 (节点圆点边缘)
     const lineStartX = nodeCenterX + textDirectionMultiplier * nodeDotRadius * Math.cos(angleRad)
     const lineStartY = nodeCenterY + textDirectionMultiplier * nodeDotRadius * Math.sin(angleRad)
-
-    // 线条长度
     const lineLength = textOffsetFromNodeEdge - lineToTextGap - nodeDotRadius
     if (lineLength < 1)
-      continue // 线太短不绘制
+      continue
 
-    // 线条终点
     const lineEndX = nodeCenterX + textDirectionMultiplier * (nodeDotRadius + lineLength) * Math.cos(angleRad)
     const lineEndY = nodeCenterY + textDirectionMultiplier * (nodeDotRadius + lineLength) * Math.sin(angleRad)
-
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line')
     line.setAttribute('x1', String(lineStartX))
     line.setAttribute('y1', String(lineStartY))
@@ -231,25 +220,59 @@ function plotNodesOnCircle() {
     line.setAttribute('stroke-width', '2.5')
     svg.appendChild(line)
 
-    // 文字中心点
+    // 文字中心点 (This part remains the same)
     const textCenterX = nodeCenterX + textDirectionMultiplier * (nodeDotRadius + lineLength + lineToTextGap) * Math.cos(angleRad)
     const textCenterY = nodeCenterY + textDirectionMultiplier * (nodeDotRadius + lineLength + lineToTextGap) * Math.sin(angleRad)
 
     const textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text')
     textElement.setAttribute('x', String(textCenterX))
-    textElement.setAttribute('y', String(textCenterY))
+    textElement.setAttribute('y', String(textCenterY)) // Y is the geometric center of the text block
 
-    // 文字旋转使其与径向线垂直 (切向)
-    const textRotationDeg = angleRad * (180 / Math.PI) + 90 // 转换为度并加90度
+    const textRotationDeg = angleRad * (180 / Math.PI) + 90
     textElement.setAttribute('transform', `rotate(${textRotationDeg}, ${textCenterX}, ${textCenterY})`)
 
-    textElement.setAttribute('text-anchor', 'middle')
-    textElement.setAttribute('dy', '0.35em') // 近似垂直居中
+    textElement.setAttribute('text-anchor', 'middle') // Horizontally centers the text
+    textElement.setAttribute('alignment-baseline', isOutsideText ? 'text-before-edge' : 'text-after-edge') // Horizontally centers the text
+    // dominant-baseline="central" makes the y attribute the true vertical center of the text content.
+    // This helps in centering the multi-line block.
+    textElement.setAttribute('dominant-baseline', isOutsideText ? 'text-after-edge' : 'text-before-edge')
     textElement.setAttribute('fill', '#fff')
-    textElement.setAttribute('font-size', '10px')
+    textElement.setAttribute('font-size', '10px') // Assuming 10px font size
     textElement.setAttribute('font-family', 'Saira')
     textElement.setAttribute('font-weight', '400')
-    textElement.textContent = eventName
+    // textElement.textContent = eventName; // We will use tspans instead
+
+    const words = eventName.split(' ')
+    const numLines = words.length
+    const lineHeightEm = 1.2 // Factor for line height (e.g., 1.2 * font-size)
+
+    if (numLines > 0) {
+      words.forEach((word, index) => {
+        // Optional: Skip creating tspan for empty words if eventName might have multiple spaces
+        // e.g. if (word === "" && numLines > 1) return;
+
+        const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan')
+        // Each tspan needs its own x attribute for text-anchor="middle" to apply correctly per line
+        tspan.setAttribute('x', String(textCenterX))
+        tspan.textContent = word
+
+        if (index === 0) {
+          // For the first line, calculate dy to position the start of the text block
+          // such that the entire block is centered around textCenterY.
+          // (numLines - 1) / 2 gives the number of line heights from the center to the top/bottom edge of the block.
+          const firstLineDy = -((numLines - 1) / 2) * lineHeightEm
+          tspan.setAttribute('dy', `${firstLineDy}em`)
+        }
+        else {
+          // Subsequent lines are positioned relative to the previous line.
+          tspan.setAttribute('dy', `${lineHeightEm}em`)
+        }
+        textElement.appendChild(tspan)
+      })
+    }
+    // If eventName could be empty and numLines is 0, textElement would be empty.
+    // This is generally fine.
+
     svg.appendChild(textElement)
   }
 }
@@ -266,33 +289,27 @@ watch(
     props.currentTimeOffset,
     effectiveSvgWidth.value,
     effectiveSvgHeight.value,
-    props.pastNodeDensityFactor, // Watch new props
-    props.futureNodeDensityFactor, // Watch new props
+    props.pastNodeDensityFactor,
+    props.futureNodeDensityFactor,
   ],
   () => {
     plotNodesOnCircle()
   },
-  { deep: true, immediate: false }, // immediate:false 避免与onMounted重复调用，deep用于数组/对象
+  { deep: true, immediate: false },
 )
 </script>
 
 <template>
-  <div class="canvas_wrapper">
-    <div class="flex justify-center">
-      <!-- eslint-disable-next-line vue/html-self-closing -->
-      <svg ref="svgEl" :width="effectiveSvgWidth" :height="effectiveSvgHeight"></svg>
-    </div>
+  <div class="canvas_wrapper flex w-full bottom-0 justify-center absolute overflow-hidden">
+    >
+    <!-- eslint-disable-next-line vue/html-self-closing -->
+    <svg ref="svgEl" class="w-full" :width="effectiveSvgWidth" :height="effectiveSvgHeight"></svg>
   </div>
 </template>
 
 <style lang="css" scoped>
 .canvas_wrapper {
-  background: #00000000;
-  color: #fff;
   clip-path: inset(0 -100vmax);
   height: 200px; /* This might be dynamic or better handled */
-  overflow: hidden;
-  position: absolute;
-  bottom: 0;
 }
 </style>

@@ -42,7 +42,7 @@ onMounted(() => {
 
 <style lang="css" scoped>
 .screen-adapter {
-  background-image: url('https://www.spacex.com/static/images/falcon-9/F9_7.jpg');
+  background-image: url('/falcon9_16_9.jpg');
   background-size: 150%;
   background-position: center;
   transform-origin: 0 0;
