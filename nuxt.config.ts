@@ -14,7 +14,6 @@ export default defineNuxtConfig({
   devtools: {
     enabled: false,
   },
-
   app: {
     head: {
       viewport: 'width=device-width,initial-scale=1',
@@ -65,7 +64,6 @@ export default defineNuxtConfig({
     prerender: {
       crawlLinks: false,
       routes: ['/'],
-      ignore: ['/hi'],
     },
   },
 
@@ -79,4 +77,7 @@ export default defineNuxtConfig({
   },
 
   pwa,
+  unocss: {
+    nuxtLayers: true,
+  },
 })
