@@ -11,6 +11,24 @@ const props = defineProps({
     default: '1080',
   },
 })
+const { persistedBackgroundImageUrl } = useSpaceTimeline()
+
+const dynamicBackgroundStyle = computed(() => {
+  if (persistedBackgroundImageUrl.value && persistedBackgroundImageUrl.value.trim() !== '') {
+    return {
+      'background-image': `url('${persistedBackgroundImageUrl.value}')`,
+      'background-size': 'cover',
+      'background-position': 'center center',
+      'background-repeat': 'no-repeat',
+      'background-attachment': 'fixed',
+    }
+  }
+  // 如果没有有效的 URL，可以返回一个空对象或默认样式
+  return {
+    'background-color': '#0f172a', // 例如 slate-900
+  }
+})
+
 const style = reactive({
   width: `${props.width}px`,
   height: `${props.height}px`,
@@ -35,16 +53,18 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="screen-adapter" :style="style">
+  <div
+    class="screen-adapter" :style="{
+      ...style,
+      ...dynamicBackgroundStyle,
+    }"
+  >
     <slot />
   </div>
 </template>
 
 <style lang="css" scoped>
 .screen-adapter {
-  background-image: url('/falcon9_16_9.jpg');
-  background-size: 150%;
-  background-position: center;
   transform-origin: 0 0;
   position: absolute;
   left: 50%;
