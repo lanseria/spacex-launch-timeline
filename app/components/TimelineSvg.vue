@@ -121,8 +121,8 @@ function plotNodesOnCircle() {
   const safePastDensityFactor = Math.max(0.1, props.pastNodeDensityFactor ?? 1.0)
   const safeFutureDensityFactor = Math.max(0.1, props.futureNodeDensityFactor ?? 1.0)
 
-  const animationStartTime = -7 // Start animation at T-7s
-  const animationDuration = 6 // Animation lasts 5 seconds
+  const animationStartTime = -15 // Start animation at T-15s
+  const animationDuration = 5 // Animation lasts 5 seconds
   const animationEndTime = animationStartTime + animationDuration
 
   // Determine the target density for events that are currently in the "past" slots
@@ -184,7 +184,7 @@ function plotNodesOnCircle() {
     nodeOuterCircle.setAttribute('stroke-width', '1.5')
     svg.appendChild(nodeOuterCircle)
 
-    if (Math.abs(timeRelativeToNow) <= 2) {
+    if (timeRelativeToNow <= 0.5 && timeRelativeToNow >= -2) {
       const innerDotActive = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
       innerDotActive.setAttribute('cx', String(nodeCenterX))
       innerDotActive.setAttribute('cy', String(nodeCenterY))

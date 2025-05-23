@@ -6,16 +6,29 @@ const {
   timestamps,
   nodeNames,
   missionTimeRaw,
-  timeValueRaw,
+  timeValueRaw, // 这个是初始倒计时起点秒数 (正数)
   timerClock,
   isStarted,
+  isPaused, // 新增
+  initialCountdownOffset,
   processedTimestamps,
   missionTimeSeconds,
   currentTimeOffset,
+  jumpTargetTimeRaw, // 新增
   addNode,
   deleteNode,
-  toggleLaunch,
+  toggleLaunch, // 开始/暂停/继续
+  resetTimer, // 新增
+  jumpToTime, // 新增
 } = useSpaceTimeline()
+
+const controlButtonText = computed(() => {
+  if (!isStarted.value)
+    return '开始倒计时'
+  if (isPaused.value)
+    return '继续'
+  return '暂停'
+})
 </script>
 
 <template>
@@ -34,7 +47,7 @@ const {
     </div>
 
     <div class="mx-auto my-8 gap-4 grid grid-cols-3 w-1200px justify-center">
-      <!-- 卡片 1: 添加事件 -->
+      <!-- 卡片 1: 添加事件 (保持不变) -->
       <div class="p-6 border border-gray-200 rounded-lg bg-black/50 max-w-full dark:border-gray-700">
         <h2 class="text-lg font-semibold mb-4">
           添加事件 (单位: 秒)
@@ -81,11 +94,49 @@ const {
         </h2>
         <button
           class="btn-action mb-2 w-full"
-          :class="isStarted ? 'bg-yellow-500 hover:bg-yellow-600' : 'bg-blue-500 hover:bg-blue-600'"
+          :class="{
+            'bg-blue-500 hover:bg-blue-600': !isStarted, // 开始
+            'bg-yellow-500 hover:bg-yellow-600': isStarted && !isPaused, // 暂停
+            'bg-green-500 hover:bg-green-600': isStarted && isPaused, // 继续
+          }"
           @click="toggleLaunch"
         >
-          {{ isStarted ? "停止" : "开始" }}倒计时
+          {{ controlButtonText }}
         </button>
+        <button
+          class="btn-action mt-2 bg-red-500 w-full hover:bg-red-600"
+          :disabled="!isStarted && currentTimeOffset === initialCountdownOffset"
+          aria-label="重置计时器"
+          @click="resetTimer"
+        >
+          重置计时器
+        </button>
+
+        <div class="my-4 border-t border-gray-300 dark:border-gray-600" />
+
+        <h2 class="text-lg font-semibold mb-2">
+          快速跳转 (秒)
+        </h2>
+        <div class="flex items-center space-x-2">
+          <input
+            v-model.number="jumpTargetTimeRaw"
+            type="number"
+            placeholder="例如: -30, 0, 120"
+            class="input-field flex-grow dark:text-white dark:bg-gray-700"
+            aria-label="跳转到的时间点 (秒)"
+            @keyup.enter="jumpToTime"
+          >
+          <button
+            class="btn-action bg-indigo-500 hover:bg-indigo-600"
+            aria-label="跳转到指定时间"
+            @click="jumpToTime"
+          >
+            跳转
+          </button>
+        </div>
+        <small class="text-xs text-gray-500 mt-1 block dark:text-gray-400">
+          输入秒数 (负数T-, 正数T+)，回车或点击跳转。
+        </small>
 
         <div class="my-4 border-t border-gray-300 dark:border-gray-600" />
 
@@ -104,7 +155,7 @@ const {
         </small>
       </div>
 
-      <!-- 卡片 3: 发射倒计时起点 -->
+      <!-- 卡片 3: 发射倒计时起点 (保持不变) -->
       <div class="p-6 border border-gray-200 rounded-lg bg-black/50 max-w-full dark:border-gray-700">
         <h2 class="text-lg font-semibold mb-2">
           发射倒计时起点 (秒)
@@ -115,15 +166,16 @@ const {
           placeholder="例如: 60 (从T-60秒开始)"
           class="input-field w-full dark:text-white dark:bg-gray-700"
           aria-label="发射倒计时秒数 (正数)"
+          :disabled="isStarted"
         >
         <small class="text-xs text-gray-500 dark:text-gray-400">
-          从T减多少秒开始倒计时，请输入正数。例如60代表从 T-60秒 开始。
+          从T减多少秒开始倒计时，请输入正数。例如60代表从 T-60秒 开始。计时器运行时不可修改。
         </small>
       </div>
     </div>
 
-    <!-- 计时器时钟显示 -->
-    <div class="font-400 font-saira mx-auto text-center max-w-md bottom-16px left-1/2 absolute z-100 -translate-x-1/2">
+    <!-- 计时器时钟显示 (保持不变) -->
+    <div class="font-400 font-saira mx-auto text-center max-w-md bottom-16px left-1/2 fixed z-100 -translate-x-1/2">
       <div
         class="countdown text-42px text-white leading-tight"
       >
@@ -136,7 +188,7 @@ const {
       </div>
     </div>
 
-    <!-- SVG 时间线可视化 -->
+    <!-- SVG 时间线可视化 (保持不变) -->
     <TimelineSvg
       :timestamps="processedTimestamps"
       :node-names="nodeNames"
@@ -151,29 +203,30 @@ const {
 </template>
 
 <style scoped>
+/* 样式保持不变 */
 .countdown {
   font-variant-numeric: tabular-nums;
 }
 .input-field {
-  @apply block px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm dark:bg-gray-800 dark:border-gray-600 dark:text-white dark:focus:ring-offset-gray-900 dark:focus:border-indigo-400;
+  @apply block rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-indigo-400 dark:focus:ring-offset-gray-900;
 }
 
 .btn-action {
-  @apply px-4 py-2 border border-transparent text-base font-medium rounded-md shadow-sm text-white focus:ring-2 focus:ring-offset-2;
+  @apply rounded-md border border-transparent px-4 py-2 text-base font-medium text-white shadow-sm focus:ring-2 focus:ring-offset-2;
 }
 
 .btn-action:disabled {
-  @apply bg-gray-300 dark:bg-gray-700 cursor-not-allowed;
+  @apply cursor-not-allowed bg-gray-300 dark:bg-gray-700;
 }
 
 .node_list_scrollbar::-webkit-scrollbar {
-  -webkit-appearance: none;
   width: 1px;
+  -webkit-appearance: none;
 }
 
 .node_list_scrollbar::-webkit-scrollbar-thumb {
   border-radius: 4px;
-  background-color: rgba(0, 0, 0, 0.5);
-  -webkit-box-shadow: 0 0 1px rgba(255, 255, 255, 0.5);
+  background-color: rgb(0 0 0 / 50%);
+  -webkit-box-shadow: 0 0 1px rgb(255 255 255 / 50%);
 }
 </style>
