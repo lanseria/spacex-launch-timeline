@@ -2,7 +2,7 @@
 
 一个基于 Nuxt 3 和 Vue 3 构建的交互式 SpaceX 发射时间线模拟用户界面。用户可以自定义发射事件、总任务时长、倒计时起点，并通过一个动态的SVG圆弧时间线可视化整个发射过程。
 
-![SpaceX Launch Timeline UI 预览](./spacex-timeline-preview.png)
+![SpaceX Launch Timeline UI 预览](./spacex-timeline-preview.jpg)
 
 ## ✨ 项目特色
 
