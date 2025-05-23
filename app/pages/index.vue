@@ -9,17 +9,18 @@ const {
   timeValueRaw, // 这个是初始倒计时起点秒数 (正数)
   timerClock,
   isStarted,
-  isPaused, // 新增
+  isPaused,
+  // isTPlus,
   initialCountdownOffset,
   processedTimestamps,
   missionTimeSeconds,
   currentTimeOffset,
-  jumpTargetTimeRaw, // 新增
+  jumpTargetTimeRaw,
   addNode,
   deleteNode,
-  toggleLaunch, // 开始/暂停/继续
-  resetTimer, // 新增
-  jumpToTime, // 新增
+  toggleLaunch,
+  resetTimer,
+  jumpToTime,
 } = useSpaceTimeline()
 
 const controlButtonText = computed(() => {
