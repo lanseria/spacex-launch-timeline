@@ -200,6 +200,24 @@ const controlButtonText = computed(() => {
       :past-node-density-factor="3"
       :future-node-density-factor="1"
     />
+    <div class="flex gap-4 bottom-10px left-60px absolute">
+      <Gauge
+        label="SPEED"
+        unit="KM/H"
+        :initial-value="60"
+        :max-value="120"
+        :total-gauge-angle-sweep="240"
+        :critical-angle-point="160"
+      />
+      <Gauge
+        label="ALTITUDE"
+        unit="KM"
+        :initial-value="60"
+        :max-value="120"
+        :total-gauge-angle-sweep="240"
+        :critical-angle-point="160"
+      />
+    </div>
   </LayoutAdapter>
 </template>
 
