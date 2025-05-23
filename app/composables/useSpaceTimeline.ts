@@ -47,51 +47,29 @@ export function useSpaceTimeline() {
   const firstNegativeEventTime = initialEventTimes.find(t => t < 0)
   const defaultCountdownStartSeconds = firstNegativeEventTime ? Math.abs(firstNegativeEventTime) : 60
 
-  const initialTimestamps = ref<number[]>(initialEventTimes)
-  const initialNodeNames = ref<string[]>(initialEventNames)
+  // 使用 useLocalStorage 替换手动 localStorage 操作
+  const timestamps = useLocalStorage<number[]>('spacex_timestamps_seconds', initialEventTimes, {
+    // 可选：自定义序列化/反序列化，但对于数组和基本类型，默认行为通常足够
+    // serializer: {
+    //   read: (v: string) => JSON.parse(v),
+    //   write: (v: number[]) => JSON.stringify(v),
+    // },
+    // mergeDefaults: true, // 可选：如果localStorage中的值部分有效，是否与默认值合并
+  })
+  const nodeNames = useLocalStorage<string[]>('spacex_nodenames_zh', initialEventNames)
 
-  if (import.meta.client) {
-    const storedTimestamps = localStorage.getItem('spacex_timestamps_seconds')
-    if (storedTimestamps) {
-      try {
-        const parsed = JSON.parse(storedTimestamps)
-        if (Array.isArray(parsed) && parsed.every(item => typeof item === 'number'))
-          initialTimestamps.value = parsed
-      }
-      catch (e) { console.error('解析存储的时间戳（秒）时出错:', e) }
-    }
-    const storedNodeNames = localStorage.getItem('spacex_nodenames_zh')
-    if (storedNodeNames) {
-      try {
-        const parsed = JSON.parse(storedNodeNames)
-        if (Array.isArray(parsed) && parsed.every(item => typeof item === 'string'))
-          initialNodeNames.value = parsed
-      }
-      catch (e) { console.error('解析存储的节点名称时出错:', e) }
-    }
-  }
-
-  const timestamps = ref<number[]>(initialTimestamps.value)
-  const nodeNames = ref<string[]>(initialNodeNames.value)
-  const missionTimeRaw = ref(String(defaultMissionDurationSeconds))
-  const timeValueRaw = ref(String(defaultCountdownStartSeconds))
+  // missionTimeRaw 和 timeValueRaw 仍然使用本地 ref，因为它们是用户输入的原始字符串
+  const missionTimeRaw = ref(defaultMissionDurationSeconds)
+  const timeValueRaw = ref(defaultCountdownStartSeconds)
 
   const timerClock = ref('T - 00:00:00') // 用于UI显示的文本时钟
   const isStarted = ref(false)
   const currentTimeOffset = ref(0) // 用于SVG平滑动画的精确时间偏移 (秒)
 
   const missionTimeSeconds = computed(() => parseSeconds(missionTimeRaw.value))
-  const processedTimestamps = computed(() => timestamps.value) // 已经是秒了
-
-  watch(timestamps, (newVal) => {
-    if (import.meta.client)
-      localStorage.setItem('spacex_timestamps_seconds', JSON.stringify(newVal))
-  }, { deep: true })
-
-  watch(nodeNames, (newVal) => {
-    if (import.meta.client)
-      localStorage.setItem('spacex_nodenames_zh', JSON.stringify(newVal))
-  }, { deep: true })
+  // processedTimestamps 现在直接使用来自 useLocalStorage 的响应式 timestamps ref
+  // .value 会在 computed getter 中自动解包
+  const processedTimestamps = computed(() => timestamps.value)
 
   function addNode() {
     timestamps.value.push(0)

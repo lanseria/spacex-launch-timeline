@@ -93,8 +93,8 @@ const {
           SVG时间轴总时长 (秒)
         </h2>
         <input
-          v-model="missionTimeRaw"
-          type="text"
+          v-model.number="missionTimeRaw"
+          type="number"
           placeholder="例如: 3600"
           class="input-field w-full dark:text-white dark:bg-gray-700"
           aria-label="SVG时间轴总时长 (秒)"
@@ -110,8 +110,8 @@ const {
           发射倒计时起点 (秒)
         </h2>
         <input
-          v-model="timeValueRaw"
-          type="text"
+          v-model.number="timeValueRaw"
+          type="number"
           placeholder="例如: 60 (从T-60秒开始)"
           class="input-field w-full dark:text-white dark:bg-gray-700"
           aria-label="发射倒计时秒数 (正数)"
