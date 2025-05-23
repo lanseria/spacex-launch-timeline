@@ -123,9 +123,9 @@ const {
     </div>
 
     <!-- 计时器时钟显示 -->
-    <div class="font-400 font-saira mx-auto text-center max-w-md bottom-20px left-1/2 absolute z-100 -translate-x-1/2">
+    <div class="font-400 font-saira mx-auto text-center max-w-md bottom-16px left-1/2 absolute z-100 -translate-x-1/2">
       <div
-        class="countdown text-4xl text-white"
+        class="countdown text-42px text-white leading-tight"
       >
         {{ timerClock }}
       </div>

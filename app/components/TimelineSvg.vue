@@ -17,7 +17,7 @@ const effectiveSvgWidth = computed(() => props.svgWidth || 1200)
 const effectiveSvgHeight = computed(() => props.svgHeight || 200)
 
 // --- 圆弧几何配置 ---
-const exposedArcAngleDeg = 60
+const exposedArcAngleDeg = 64
 const exposedArcAngleRad = exposedArcAngleDeg * (Math.PI / 180)
 
 const circleRadius = computed(() => effectiveSvgWidth.value / 2)
@@ -48,8 +48,8 @@ function plotNodesOnCircle() {
   const endAngle = -Math.PI / 2 + angleSpan / 2
   const arcDrawingFlags = '0 0 1'
 
-  const innerArcOffsetFromMain = 40
-  const outerArcOffsetFromMain = 40
+  const innerArcOffsetFromMain = 45
+  const outerArcOffsetFromMain = 45
   const innerArcFillColor = 'rgba(0, 0, 0, 0.7)'
   const innerArcStrokeColor = '#808080'
   const innerArcStrokeWidth = '2'
@@ -301,7 +301,6 @@ watch(
 
 <template>
   <div class="canvas_wrapper flex w-full bottom-0 justify-center absolute overflow-hidden">
-    >
     <!-- eslint-disable-next-line vue/html-self-closing -->
     <svg ref="svgEl" class="w-full" :width="effectiveSvgWidth" :height="effectiveSvgHeight"></svg>
   </div>
