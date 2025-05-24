@@ -5,7 +5,7 @@ import {
   presetIcons,
   presetTypography,
   presetWebFonts,
-  presetWind4,
+  presetWind3,
   transformerDirectives,
   transformerVariantGroup,
 } from 'unocss'
@@ -17,14 +17,14 @@ export default mergeConfigs([config, {
     ['icon-btn', 'inline-block cursor-pointer select-none opacity-75 transition duration-200 ease-in-out hover:opacity-100 hover:text-teal-600'],
   ],
   presets: [
-    presetWind4(),
+    presetWind3(),
     presetAttributify(),
     presetIcons({
       scale: 1.2,
     }),
     presetTypography(),
     presetWebFonts({
-      themeKey: 'font',
+      // themeKey: 'font',
       fonts: {
         sans: 'DM Sans',
         serif: 'DM Serif Display',
@@ -32,7 +32,7 @@ export default mergeConfigs([config, {
         saira: [
           {
             name: 'Saira',
-            weights: ['200', '400', '700'],
+            weights: ['200', '400', '500', '600', '700'],
           },
         ],
       },

@@ -49,10 +49,12 @@ export function useSpaceTimeline() {
   const currentAltitude = useLocalStorage<number>('spacex_telemetry_altitude', defaultConfig.altitude)
 
   // 用于存储用户通过输入框设置的或默认的背景URL，这个会被持久化
-  const persistedBackgroundImageUrl = useLocalStorage<string>(
+  const backgroundImageUrl = useLocalStorage<string>(
     'spacex_persisted_background_image_url',
     defaultConfig.backgroundImageUrl,
   )
+
+  const showPanel = ref(true)
 
   const timestamps = useLocalStorage<number[]>('spacex_timestamps_seconds', initialEventTimes)
   const nodeNames = useLocalStorage<string[]>('spacex_nodenames_zh', initialEventNames)
@@ -224,18 +226,18 @@ export function useSpaceTimeline() {
 
   function restoreBackgroundImage() {
     // 如果当前显示的是一个Object URL，先撤销它
-    if (persistedBackgroundImageUrl.value?.startsWith('blob:')) {
-      URL.revokeObjectURL(persistedBackgroundImageUrl.value)
+    if (backgroundImageUrl.value?.startsWith('blob:')) {
+      URL.revokeObjectURL(backgroundImageUrl.value)
     }
     // 恢复到持久化的URL
-    persistedBackgroundImageUrl.value = defaultConfig.backgroundImageUrl
+    backgroundImageUrl.value = defaultConfig.backgroundImageUrl
   }
 
   onBeforeUnmount(() => {
     _stopInternalTimer()
     // 组件卸载时，如果当前显示的是Object URL，也撤销它
-    if (persistedBackgroundImageUrl.value?.startsWith('blob:')) {
-      URL.revokeObjectURL(persistedBackgroundImageUrl.value)
+    if (backgroundImageUrl.value?.startsWith('blob:')) {
+      URL.revokeObjectURL(backgroundImageUrl.value)
     }
   })
 
@@ -248,7 +250,8 @@ export function useSpaceTimeline() {
     vehicleName, // 替换 vehicleNameDisplay
     currentSpeed, // 新增，用于 Gauge 和配置
     currentAltitude, // 新增，用于 Gauge 和配置
-    persistedBackgroundImageUrl, // 用于URL输入框绑定
+    backgroundImageUrl, // 用于URL输入框绑定
+    showPanel,
     restoreBackgroundImage, // 还原背景的函数
     // --- 修改/新增结束 ---
     timestamps,

@@ -109,10 +109,10 @@ function plotNodesOnCircle() {
 
   const numEvents = props.timestamps.length
   const halfMissionDuration = props.missionDuration / 2
-  const nodeDotRadius = 6
-  const nodeOuterRadius = 6
+  const nodeDotRadius = 6.5
+  const nodeOuterRadius = 6.5
   const nodeInnerDotRadiusSmall = 3
-  const nodeInnerDotRadiusLarge = 3.5
+  // const nodeInnerDotRadiusLarge = 3.5
 
   const textOffsetFromNodeEdge = 18
   const lineToTextGap = 7
@@ -184,15 +184,7 @@ function plotNodesOnCircle() {
     nodeOuterCircle.setAttribute('stroke-width', '1.5')
     svg.appendChild(nodeOuterCircle)
 
-    if (timeRelativeToNow <= 0 && timeRelativeToNow >= -2) {
-      const innerDotActive = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
-      innerDotActive.setAttribute('cx', String(nodeCenterX))
-      innerDotActive.setAttribute('cy', String(nodeCenterY))
-      innerDotActive.setAttribute('r', String(nodeInnerDotRadiusLarge))
-      innerDotActive.setAttribute('fill', '#FFF')
-      svg.appendChild(innerDotActive)
-    }
-    else if (timeRelativeToNow < -2) {
+    if (timeRelativeToNow <= 0) {
       const innerDotPast = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
       innerDotPast.setAttribute('cx', String(nodeCenterX))
       innerDotPast.setAttribute('cy', String(nodeCenterY))
@@ -239,7 +231,7 @@ function plotNodesOnCircle() {
     textElement.setAttribute('fill', '#fff')
     textElement.setAttribute('font-size', '10px') // Assuming 10px font size
     textElement.setAttribute('font-family', 'Saira')
-    textElement.setAttribute('font-weight', '400')
+    textElement.setAttribute('font-weight', '500')
     // textElement.textContent = eventName; // We will use tspans instead
 
     const words = eventName.split(' ')
@@ -300,15 +292,8 @@ watch(
 </script>
 
 <template>
-  <div class="canvas_wrapper flex w-full bottom-0 justify-center absolute overflow-hidden">
+  <div class="flex w-full bottom-0 justify-center absolute overflow-hidden">
     <!-- eslint-disable-next-line vue/html-self-closing -->
     <svg ref="svgEl" class="w-full" :width="effectiveSvgWidth" :height="effectiveSvgHeight"></svg>
   </div>
 </template>
-
-<style lang="css" scoped>
-.canvas_wrapper {
-  clip-path: inset(0 -100vmax);
-  height: 200px; /* This might be dynamic or better handled */
-}
-</style>

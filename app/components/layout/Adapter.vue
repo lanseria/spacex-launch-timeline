@@ -11,12 +11,12 @@ const props = defineProps({
     default: '1080',
   },
 })
-const { persistedBackgroundImageUrl } = useSpaceTimeline()
+const { backgroundImageUrl } = useSpaceTimeline()
 
 const dynamicBackgroundStyle = computed(() => {
-  if (persistedBackgroundImageUrl.value && persistedBackgroundImageUrl.value.trim() !== '') {
+  if (backgroundImageUrl.value && backgroundImageUrl.value.trim() !== '') {
     return {
-      'background-image': `url('${persistedBackgroundImageUrl.value}')`,
+      'background-image': `url('${backgroundImageUrl.value}')`,
       'background-size': 'cover',
       'background-position': 'center center',
       'background-repeat': 'no-repeat',
@@ -44,7 +44,6 @@ function getScale() {
 // 设置比例
 function setScale() {
   style.transform = `scale(${getScale()}) translate(-50%, -50%)`
-  console.warn('任你千变万化,我都不会影响性能')
 }
 onMounted(() => {
   setScale()
