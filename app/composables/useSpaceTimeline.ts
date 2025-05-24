@@ -1,9 +1,11 @@
+// composables/useSpaceTimeline.ts
+
 // 默认配置数据
 const defaultConfig = {
   missionName: 'Starlink',
   vehicle: 'Falcon 9 Block 5',
-  speed: 7501, // 默认速度
-  altitude: 64, // 默认高度
+  speed: 7501,
+  altitude: 64,
   backgroundImageUrl: '/falcon9_16_9.jpg',
   videoConfig: {
     type: 'local',
@@ -22,6 +24,11 @@ const defaultConfig = {
     { time: 490, name: 'SECO-1' },
     { time: 530, name: 'LANDING' },
   ],
+  // 新增：MAX-Q 默认文本配置
+  maxQTitle: 'MAX-Q',
+  maxQLine1: 'MAXIMUM DYNAMIC PRESSURE',
+  maxQLine2: 'THIS IS THE LARGEST AMOUNT OF STRESS',
+  maxQLine3: 'EXERTED ON THE VEHICLE',
 }
 
 function parseSeconds(timeValue: string | number): number {
@@ -42,17 +49,20 @@ export function useSpaceTimeline() {
   const firstNegativeEventTime = initialEventTimes.find(t => t < 0)
   const defaultCountdownStartSeconds = firstNegativeEventTime ? Math.abs(firstNegativeEventTime) : 60
 
-  // --- 新增: 使用 useLocalStorage 持久化任务和飞行器信息 ---
   const missionName = useLocalStorage<string>('spacex_mission_name', defaultConfig.missionName)
   const vehicleName = useLocalStorage<string>('spacex_vehicle_name', defaultConfig.vehicle)
   const currentSpeed = useLocalStorage<number>('spacex_telemetry_speed', defaultConfig.speed)
   const currentAltitude = useLocalStorage<number>('spacex_telemetry_altitude', defaultConfig.altitude)
-
-  // 用于存储用户通过输入框设置的或默认的背景URL，这个会被持久化
   const backgroundImageUrl = useLocalStorage<string>(
     'spacex_persisted_background_image_url',
     defaultConfig.backgroundImageUrl,
   )
+
+  // 新增：MAX-Q 文本的 useLocalStorage 引用
+  const maxQTitle = useLocalStorage<string>('spacex_max_q_title', defaultConfig.maxQTitle)
+  const maxQLine1 = useLocalStorage<string>('spacex_max_q_line1', defaultConfig.maxQLine1)
+  const maxQLine2 = useLocalStorage<string>('spacex_max_q_line2', defaultConfig.maxQLine2)
+  const maxQLine3 = useLocalStorage<string>('spacex_max_q_line3', defaultConfig.maxQLine3)
 
   const showPanel = ref(true)
 
@@ -225,35 +235,29 @@ export function useSpaceTimeline() {
   }
 
   function restoreBackgroundImage() {
-    // 如果当前显示的是一个Object URL，先撤销它
     if (backgroundImageUrl.value?.startsWith('blob:')) {
       URL.revokeObjectURL(backgroundImageUrl.value)
     }
-    // 恢复到持久化的URL
     backgroundImageUrl.value = defaultConfig.backgroundImageUrl
   }
 
   onBeforeUnmount(() => {
     _stopInternalTimer()
-    // 组件卸载时，如果当前显示的是Object URL，也撤销它
     if (backgroundImageUrl.value?.startsWith('blob:')) {
       URL.revokeObjectURL(backgroundImageUrl.value)
     }
   })
 
-  // 初始化计时器
   resetCoreTimer()
 
   return {
-    // --- 修改/新增: 直接暴露 ref ---
-    missionName, // 替换 missionNameDisplay
-    vehicleName, // 替换 vehicleNameDisplay
-    currentSpeed, // 新增，用于 Gauge 和配置
-    currentAltitude, // 新增，用于 Gauge 和配置
-    backgroundImageUrl, // 用于URL输入框绑定
+    missionName,
+    vehicleName,
+    currentSpeed,
+    currentAltitude,
+    backgroundImageUrl,
     showPanel,
-    restoreBackgroundImage, // 还原背景的函数
-    // --- 修改/新增结束 ---
+    restoreBackgroundImage,
     timestamps,
     nodeNames,
     missionTimeRaw,
@@ -270,7 +274,12 @@ export function useSpaceTimeline() {
     addNode,
     deleteNode,
     toggleLaunch,
-    resetTimer: resetCoreTimer, // 暴露核心计时器重置函数
+    resetTimer: resetCoreTimer,
     jumpToTime,
+    // 新增：导出 MAX-Q 文本引用
+    maxQTitle,
+    maxQLine1,
+    maxQLine2,
+    maxQLine3,
   }
 }

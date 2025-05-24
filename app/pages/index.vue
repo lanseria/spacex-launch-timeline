@@ -25,6 +25,11 @@ const {
   resetTimer,
   jumpToTime,
   restoreBackgroundImage,
+  // 新增：解构 MAX-Q 文本引用
+  maxQTitle,
+  maxQLine1,
+  maxQLine2,
+  maxQLine3,
 } = useSpaceTimeline()
 
 const panelRef = useTemplateRef<HTMLElement>('panelRef')
@@ -57,7 +62,7 @@ watch(localFileObjectUrl, (newObjectUrl) => {
       URL.revokeObjectURL(backgroundImageUrl.value)
     }
     backgroundImageUrl.value = newObjectUrl
-    triggerRef(backgroundImageUrl) // 确保响应式更新，尽管 useLocalStorage 通常会处理
+    triggerRef(backgroundImageUrl)
   }
 })
 
@@ -81,51 +86,105 @@ onUnmounted(() => {
       </Head>
 
       <div class="mx-auto my-4 text-center relative z-10">
-        <!-- 添加 relative z-10 确保在背景之上 -->
         <p class="text-40px text-white font-500 font-saira">
           {{ vehicleName }}
         </p>
       </div>
 
       <div ref="panelRef" class="mx-auto my-8 gap-4 grid grid-cols-3 w-1200px justify-center relative z-20">
-        <!-- 卡片 1: 添加事件 -->
-        <div v-if="showPanel" class="exclude-from-screenshot p-6 border border-gray-200 rounded-lg bg-black/50 max-w-full dark:border-gray-700">
-          <h2 class="text-lg font-semibold mb-4">
-            添加事件 (单位: 秒)
-          </h2>
-          <div class="node_list_scrollbar max-h-[200px] overflow-y-auto">
-            <div v-for="(timestamp, i) in timestamps" :key="i" class="mb-2 flex items-center space-x-2">
-              <input
-                v-model.number="timestamps[i]"
-                type="number"
-                placeholder="例如: -60, 0, 120"
-                class="input-field flex-grow w-80px dark:text-white dark:bg-gray-700"
-                :aria-label="`事件 ${i + 1} 的时间戳 (秒)`"
-              >
-              <input
-                v-model="nodeNames[i]"
-                type="text"
-                placeholder="事件名称"
-                class="input-field flex-grow w-full dark:text-white dark:bg-gray-700"
-                :aria-label="`事件 ${i + 1} 的名称`"
-              >
-              <button
-                class="btn-action bg-red-500 hover:bg-red-600"
-                :disabled="timestamps.length <= 1"
-                aria-label="删除事件"
-                @click="deleteNode(i)"
-              >
-                -
-              </button>
+        <!-- 卡片 1: 添加事件 & MAX-Q 配置 -->
+        <div v-if="showPanel" class="exclude-from-screenshot p-6 border border-gray-200 rounded-lg bg-black/50 flex flex-col max-w-full space-y-4 dark:border-gray-700">
+          <div>
+            <h2 class="text-lg font-semibold mb-4">
+              添加事件 (单位: 秒)
+            </h2>
+            <div class="node_list_scrollbar pr-2 max-h-[200px] overflow-y-auto">
+              <!-- pr-2 for scrollbar space -->
+              <div v-for="(timestamp, i) in timestamps" :key="i" class="mb-2 flex items-center space-x-2">
+                <input
+                  v-model.number="timestamps[i]"
+                  type="number"
+                  placeholder="例如: -60, 0, 120"
+                  class="input-field flex-grow w-80px dark:text-white dark:bg-gray-700"
+                  :aria-label="`事件 ${i + 1} 的时间戳 (秒)`"
+                >
+                <input
+                  v-model="nodeNames[i]"
+                  type="text"
+                  placeholder="事件名称"
+                  class="input-field flex-grow w-full dark:text-white dark:bg-gray-700"
+                  :aria-label="`事件 ${i + 1} 的名称`"
+                >
+                <button
+                  class="btn-action bg-red-500 hover:bg-red-600"
+                  :disabled="timestamps.length <= 1"
+                  aria-label="删除事件"
+                  @click="deleteNode(i)"
+                >
+                  -
+                </button>
+              </div>
+            </div>
+            <button
+              class="btn-action mt-2 bg-green-500 w-full hover:bg-green-600"
+              aria-label="添加新事件"
+              @click="addNode"
+            >
+              + 添加事件
+            </button>
+          </div>
+
+          <div>
+            <h2 class="text-lg font-semibold mb-2">
+              MAX-Q 显示文本配置
+            </h2>
+            <div class="space-y-2">
+              <div>
+                <label for="maxQTitleInput" class="text-sm text-gray-300 font-medium mb-1 block">标题</label>
+                <input
+                  id="maxQTitleInput"
+                  v-model="maxQTitle"
+                  type="text"
+                  placeholder="例如: MAX-Q"
+                  class="input-field w-full dark:text-white dark:bg-gray-700"
+                  aria-label="MAX-Q 标题"
+                >
+              </div>
+              <div>
+                <label for="maxQLine1Input" class="text-sm text-gray-300 font-medium mb-1 block">描述行 1</label>
+                <input
+                  id="maxQLine1Input"
+                  v-model="maxQLine1"
+                  type="text"
+                  placeholder="例如: MAXIMUM DYNAMIC PRESSURE"
+                  class="input-field w-full dark:text-white dark:bg-gray-700"
+                  aria-label="MAX-Q 描述行 1"
+                >
+              </div>
+              <div>
+                <label for="maxQLine2Input" class="text-sm text-gray-300 font-medium mb-1 block">描述行 2</label>
+                <input
+                  id="maxQLine2Input"
+                  v-model="maxQLine2"
+                  type="text"
+                  placeholder="例如: THIS IS THE LARGEST AMOUNT OF STRESS"
+                  class="input-field w-full dark:text-white dark:bg-gray-700"
+                  aria-label="MAX-Q 描述行 2"
+                >
+              </div>
+              <div>
+                <label for="maxQLine3Input" class="text-sm text-gray-300 font-medium mb-1 block">描述行 3</label>
+                <input
+                  id="maxQLine3Input"
+                  v-model="maxQLine3"
+                  type="text"
+                  placeholder="例如: EXERTED ON THE VEHICLE"
+                  class="input-field w-full dark:text-white dark:bg-gray-700"
+                  aria-label="MAX-Q 描述行 3"
+                >
+              </div>
             </div>
           </div>
-          <button
-            class="btn-action mt-2 bg-green-500 w-full hover:bg-green-600"
-            aria-label="添加新事件"
-            @click="addNode"
-          >
-            + 添加事件
-          </button>
         </div>
 
         <!-- 卡片 2: 控制 & SVG总时长 -->
@@ -288,7 +347,6 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- 计时器时钟显示 (保持不变，但确保 z-index 合理) -->
       <div class="font-400 font-saira mx-auto text-center max-w-md bottom-16px left-1/2 fixed z-50 -translate-x-1/2">
         <div
           class="countdown text-42px text-white leading-tight"
@@ -302,7 +360,6 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <!-- SVG 时间线可视化 (保持不变，但确保 z-index 合理) -->
       <TimelineSvg
         class="bottom-0 left-1/2 fixed z-30 -translate-x-1/2"
         :timestamps="processedTimestamps"
@@ -314,7 +371,6 @@ onUnmounted(() => {
         :past-node-density-factor="3"
         :future-node-density-factor="1"
       />
-      <!-- Gauge 组件 (保持不变，但确保 z-index 合理) -->
       <TrapezoidGradient class="bottom-0 left-0 absolute z-1" />
       <div class="flex gap-4 bottom-10px left-60px absolute z-30">
         <Gauge
@@ -332,15 +388,16 @@ onUnmounted(() => {
       </div>
 
       <TrapezoidGradient class="bottom-0 right-0 absolute z-1" horizontal-flip />
-      <div class="font-saira text-right bottom-30px right-50px absolute z-1">
+      <!-- 修改：右下角 MAX-Q 显示区域，绑定到响应式引用 -->
+      <div class="font-saira pr-40px text-right flex flex-col h-180px w-550px bottom-0 right-0 justify-center absolute z-1">
         <div class="text-30px font-600">
-          MAX-Q
+          {{ maxQTitle }}
         </div>
-        <div>MAXIMUN DYNAMIC PRESSURE</div>
-        <div>THIS IS THE LARGEST AMOUNT OF STRESS</div>
-        <div>EXERTED ON THE VEHICLE</div>
+        <div>{{ maxQLine1 }}</div>
+        <div>{{ maxQLine2 }}</div>
+        <div>{{ maxQLine3 }}</div>
       </div>
-    </div> <!-- screenshotTargetRef div 结束 -->
+    </div>
   </LayoutAdapter>
 </template>
 
@@ -362,13 +419,17 @@ onUnmounted(() => {
 }
 
 .node_list_scrollbar::-webkit-scrollbar {
-  width: 1px;
+  width: 8px; /* 稍微加宽一点以便观察和操作 */
   -webkit-appearance: none;
 }
 
 .node_list_scrollbar::-webkit-scrollbar-thumb {
   border-radius: 4px;
-  background-color: rgb(0 0 0 / 50%);
+  background-color: rgb(107 114 128 / 50%); /* 更改为更可见的颜色 */
   -webkit-box-shadow: 0 0 1px rgb(255 255 255 / 50%);
+}
+.node_list_scrollbar::-webkit-scrollbar-track {
+  background: rgb(31 41 55 / 50%); /* 暗色背景的轨道 */
+  border-radius: 4px;
 }
 </style>
