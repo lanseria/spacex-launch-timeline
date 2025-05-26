@@ -26,8 +26,6 @@ catalogs:
   frontend:
     '@vueuse/core': ^13.2.0
     es-toolkit: ^1.38.0
-    html2canvas: ^1.4.1
-    html2canvas-oklch: 1.5.0-alpha.0
 
     pinia: ^3.0.2
     vue: ^3.5.14

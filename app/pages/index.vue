@@ -80,39 +80,39 @@ onUnmounted(() => {
 
 <template>
   <LayoutAdapter>
-    <div class="h-full w-full left-0 top-0 fixed -z-1">
+    <div class="fixed left-0 top-0 h-full w-full -z-1">
       <Head>
         <Title>SpaceX 发射时间线 - 主页</Title>
       </Head>
 
-      <div class="mx-auto my-4 text-center relative z-10">
+      <div class="relative z-10 mx-auto my-4 text-center">
         <p class="text-40px text-white font-500 font-saira">
           {{ vehicleName }}
         </p>
       </div>
 
-      <div ref="panelRef" class="mx-auto my-8 gap-4 grid grid-cols-3 w-1200px justify-center relative z-20">
+      <div ref="panelRef" class="relative z-20 grid grid-cols-3 mx-auto my-8 w-1200px justify-center gap-4">
         <!-- 卡片 1: 添加事件 & MAX-Q 配置 -->
-        <div v-if="showPanel" class="exclude-from-screenshot p-6 border border-gray-200 rounded-lg bg-black/50 flex flex-col max-w-full space-y-4 dark:border-gray-700">
+        <div v-if="showPanel" class="exclude-from-screenshot max-w-full flex flex-col border border-gray-200 rounded-lg bg-black/50 p-6 space-y-4 dark:border-gray-700">
           <div>
-            <h2 class="text-lg font-semibold mb-4">
+            <h2 class="mb-4 text-lg font-semibold">
               添加事件 (单位: 秒)
             </h2>
-            <div class="node_list_scrollbar pr-2 max-h-[200px] overflow-y-auto">
+            <div class="node_list_scrollbar max-h-[200px] overflow-y-auto pr-2">
               <!-- pr-2 for scrollbar space -->
               <div v-for="(timestamp, i) in timestamps" :key="i" class="mb-2 flex items-center space-x-2">
                 <input
                   v-model.number="timestamps[i]"
                   type="number"
                   placeholder="例如: -60, 0, 120"
-                  class="input-field flex-grow w-80px dark:text-white dark:bg-gray-700"
+                  class="input-field w-80px flex-grow dark:bg-gray-700 dark:text-white"
                   :aria-label="`事件 ${i + 1} 的时间戳 (秒)`"
                 >
                 <input
                   v-model="nodeNames[i]"
                   type="text"
                   placeholder="事件名称"
-                  class="input-field flex-grow w-full dark:text-white dark:bg-gray-700"
+                  class="input-field w-full flex-grow dark:bg-gray-700 dark:text-white"
                   :aria-label="`事件 ${i + 1} 的名称`"
                 >
                 <button
@@ -126,7 +126,7 @@ onUnmounted(() => {
               </div>
             </div>
             <button
-              class="btn-action mt-2 bg-green-500 w-full hover:bg-green-600"
+              class="btn-action mt-2 w-full bg-green-500 hover:bg-green-600"
               aria-label="添加新事件"
               @click="addNode"
             >
@@ -135,51 +135,51 @@ onUnmounted(() => {
           </div>
 
           <div>
-            <h2 class="text-lg font-semibold mb-2">
+            <h2 class="mb-2 text-lg font-semibold">
               MAX-Q 显示文本配置
             </h2>
             <div class="space-y-2">
               <div>
-                <label for="maxQTitleInput" class="text-sm text-gray-300 font-medium mb-1 block">标题</label>
+                <label for="maxQTitleInput" class="mb-1 block text-sm text-gray-300 font-medium">标题</label>
                 <input
                   id="maxQTitleInput"
                   v-model="maxQTitle"
                   type="text"
                   placeholder="例如: MAX-Q"
-                  class="input-field w-full dark:text-white dark:bg-gray-700"
+                  class="input-field w-full dark:bg-gray-700 dark:text-white"
                   aria-label="MAX-Q 标题"
                 >
               </div>
               <div>
-                <label for="maxQLine1Input" class="text-sm text-gray-300 font-medium mb-1 block">描述行 1</label>
+                <label for="maxQLine1Input" class="mb-1 block text-sm text-gray-300 font-medium">描述行 1</label>
                 <input
                   id="maxQLine1Input"
                   v-model="maxQLine1"
                   type="text"
                   placeholder="例如: MAXIMUM DYNAMIC PRESSURE"
-                  class="input-field w-full dark:text-white dark:bg-gray-700"
+                  class="input-field w-full dark:bg-gray-700 dark:text-white"
                   aria-label="MAX-Q 描述行 1"
                 >
               </div>
               <div>
-                <label for="maxQLine2Input" class="text-sm text-gray-300 font-medium mb-1 block">描述行 2</label>
+                <label for="maxQLine2Input" class="mb-1 block text-sm text-gray-300 font-medium">描述行 2</label>
                 <input
                   id="maxQLine2Input"
                   v-model="maxQLine2"
                   type="text"
                   placeholder="例如: THIS IS THE LARGEST AMOUNT OF STRESS"
-                  class="input-field w-full dark:text-white dark:bg-gray-700"
+                  class="input-field w-full dark:bg-gray-700 dark:text-white"
                   aria-label="MAX-Q 描述行 2"
                 >
               </div>
               <div>
-                <label for="maxQLine3Input" class="text-sm text-gray-300 font-medium mb-1 block">描述行 3</label>
+                <label for="maxQLine3Input" class="mb-1 block text-sm text-gray-300 font-medium">描述行 3</label>
                 <input
                   id="maxQLine3Input"
                   v-model="maxQLine3"
                   type="text"
                   placeholder="例如: EXERTED ON THE VEHICLE"
-                  class="input-field w-full dark:text-white dark:bg-gray-700"
+                  class="input-field w-full dark:bg-gray-700 dark:text-white"
                   aria-label="MAX-Q 描述行 3"
                 >
               </div>
@@ -188,8 +188,8 @@ onUnmounted(() => {
         </div>
 
         <!-- 卡片 2: 控制 & SVG总时长 -->
-        <div v-if="showPanel" class="exclude-from-screenshot p-6 border border-gray-200 rounded-lg bg-black/50 flex-1 max-w-full dark:border-gray-700">
-          <h2 class="text-lg font-semibold mb-2">
+        <div v-if="showPanel" class="exclude-from-screenshot max-w-full flex-1 border border-gray-200 rounded-lg bg-black/50 p-6 dark:border-gray-700">
+          <h2 class="mb-2 text-lg font-semibold">
             控制
           </h2>
           <button
@@ -204,7 +204,7 @@ onUnmounted(() => {
             {{ controlButtonText }}
           </button>
           <button
-            class="btn-action mt-2 bg-red-500 w-full hover:bg-red-600"
+            class="btn-action mt-2 w-full bg-red-500 hover:bg-red-600"
             :disabled="!isStarted && currentTimeOffset === initialCountdownOffset"
             aria-label="重置计时器"
             @click="resetTimer"
@@ -212,7 +212,7 @@ onUnmounted(() => {
             重置计时器
           </button>
 
-          <h2 class="text-lg font-semibold mb-2 mt-2">
+          <h2 class="mb-2 mt-2 text-lg font-semibold">
             快速跳转 (秒)
           </h2>
           <div class="flex items-center space-x-2">
@@ -220,7 +220,7 @@ onUnmounted(() => {
               v-model.number="jumpTargetTimeRaw"
               type="number"
               placeholder="例如: -30, 0, 120"
-              class="input-field flex-grow dark:text-white dark:bg-gray-700"
+              class="input-field flex-grow dark:bg-gray-700 dark:text-white"
               aria-label="跳转到的时间点 (秒)"
               @keyup.enter="jumpToTime"
             >
@@ -232,33 +232,33 @@ onUnmounted(() => {
               跳转
             </button>
           </div>
-          <small class="text-xs text-gray-500 mt-1 block dark:text-gray-400">
+          <small class="mt-1 block text-xs text-gray-500 dark:text-gray-400">
             输入秒数 (负数T-, 正数T+)，回车或点击跳转。
           </small>
 
           <div class="my-4 border-t border-gray-300 dark:border-gray-600" />
-          <h2 class="text-lg font-semibold mb-2">
+          <h2 class="mb-2 text-lg font-semibold">
             发射倒计时起点 (秒)
           </h2>
           <input
             v-model.number="timeValueRaw"
             type="number"
             placeholder="例如: 60 (从T-60秒开始)"
-            class="input-field w-full dark:text-white dark:bg-gray-700"
+            class="input-field w-full dark:bg-gray-700 dark:text-white"
             aria-label="发射倒计时秒数 (正数)"
             :disabled="isStarted"
           >
-          <small class="text-xs text-gray-500 mb-4 block dark:text-gray-400">
+          <small class="mb-4 block text-xs text-gray-500 dark:text-gray-400">
             从T减多少秒开始倒计时，请输入正数。例如60代表从 T-60秒 开始。计时器运行时不可修改。
           </small>
-          <h2 class="text-lg font-semibold mb-2">
+          <h2 class="mb-2 text-lg font-semibold">
             SVG时间轴总时长 (秒)
           </h2>
           <input
             v-model.number="missionTimeRaw"
             type="number"
             placeholder="例如: 3600"
-            class="input-field w-full dark:text-white dark:bg-gray-700"
+            class="input-field w-full dark:bg-gray-700 dark:text-white"
             aria-label="SVG时间轴总时长 (秒)"
           >
           <small class="text-xs text-gray-500 dark:text-gray-400">
@@ -267,64 +267,64 @@ onUnmounted(() => {
         </div>
 
         <!-- 卡片 3: 发射倒计时起点 & 任务配置 -->
-        <div v-if="showPanel" class="exclude-from-screenshot p-6 border border-gray-200 rounded-lg bg-black/50 max-w-full dark:border-gray-700">
-          <h2 class="text-lg font-semibold mb-2">
+        <div v-if="showPanel" class="exclude-from-screenshot max-w-full border border-gray-200 rounded-lg bg-black/50 p-6 dark:border-gray-700">
+          <h2 class="mb-2 text-lg font-semibold">
             任务与飞行数据配置
           </h2>
           <div class="space-y-3">
             <div>
-              <label for="missionNameInput" class="text-sm text-gray-300 font-medium mb-1 block">任务名称</label>
+              <label for="missionNameInput" class="mb-1 block text-sm text-gray-300 font-medium">任务名称</label>
               <input
                 id="missionNameInput"
                 v-model="missionName"
                 type="text"
                 placeholder="例如: Starlink"
-                class="input-field w-full dark:text-white dark:bg-gray-700"
+                class="input-field w-full dark:bg-gray-700 dark:text-white"
                 aria-label="任务名称"
               >
             </div>
             <div>
-              <label for="vehicleNameInput" class="text-sm text-gray-300 font-medium mb-1 block">运载工具</label>
+              <label for="vehicleNameInput" class="mb-1 block text-sm text-gray-300 font-medium">运载工具</label>
               <input
                 id="vehicleNameInput"
                 v-model="vehicleName"
                 max="10000"
                 type="text"
                 placeholder="例如: Falcon 9 Block 5"
-                class="input-field w-full dark:text-white dark:bg-gray-700"
+                class="input-field w-full dark:bg-gray-700 dark:text-white"
                 aria-label="运载工具名称"
               >
             </div>
             <div>
-              <label for="speedInput" class="text-sm text-gray-300 font-medium mb-1 block">当前速度 (KM/H)</label>
+              <label for="speedInput" class="mb-1 block text-sm text-gray-300 font-medium">当前速度 (KM/H)</label>
               <input
                 id="speedInput"
                 v-model.number="currentSpeed"
                 type="number"
                 max="100"
                 placeholder="例如: 7501"
-                class="input-field w-full dark:text-white dark:bg-gray-700"
+                class="input-field w-full dark:bg-gray-700 dark:text-white"
                 aria-label="当前速度 (KM/H)"
               >
             </div>
             <div>
-              <label for="altitudeInput" class="text-sm text-gray-300 font-medium mb-1 block">当前高度 (KM)</label>
+              <label for="altitudeInput" class="mb-1 block text-sm text-gray-300 font-medium">当前高度 (KM)</label>
               <input
                 id="altitudeInput"
                 v-model.number="currentAltitude"
                 type="number"
                 placeholder="例如: 64"
-                class="input-field w-full dark:text-white dark:bg-gray-700"
+                class="input-field w-full dark:bg-gray-700 dark:text-white"
                 aria-label="当前高度 (KM)"
               >
             </div>
-            <h2 class="text-lg font-semibold mb-2">
+            <h2 class="mb-2 text-lg font-semibold">
               页面背景图
             </h2>
             <div class="mt-3 flex space-x-2">
               <button
                 type="button"
-                class="btn-action bg-sky-500 flex-1 hover:bg-sky-600"
+                class="btn-action flex-1 bg-sky-500 hover:bg-sky-600"
                 aria-label="选择本地背景图片"
                 @click="openFileDialog()"
               >
@@ -332,7 +332,7 @@ onUnmounted(() => {
               </button>
               <button
                 type="button"
-                class="btn-action bg-orange-500 flex-1 hover:bg-orange-600"
+                class="btn-action flex-1 bg-orange-500 hover:bg-orange-600"
                 aria-label="还原背景图"
                 :disabled="(!selectedFiles || selectedFiles.length === 0) && !backgroundImageUrl?.startsWith('blob:')"
                 @click="handleRestoreBackgroundImage"
@@ -340,14 +340,14 @@ onUnmounted(() => {
                 还原背景
               </button>
             </div>
-            <small v-if="currentFile" class="text-xs text-gray-400 mt-1 block">
+            <small v-if="currentFile" class="mt-1 block text-xs text-gray-400">
               当前预览: {{ currentFile.name }} (本地文件不会被保存) 可以点击背景隐藏面板
             </small>
           </div>
         </div>
       </div>
 
-      <div class="font-400 font-saira mx-auto text-center max-w-md bottom-16px left-1/2 fixed z-50 -translate-x-1/2">
+      <div class="fixed bottom-16px left-1/2 z-50 mx-auto max-w-md text-center font-400 font-saira -translate-x-1/2">
         <div
           class="countdown text-42px text-white leading-tight"
         >
@@ -361,7 +361,7 @@ onUnmounted(() => {
       </div>
 
       <TimelineSvg
-        class="bottom-0 left-1/2 fixed z-30 -translate-x-1/2"
+        class="fixed bottom-0 left-1/2 z-30 -translate-x-1/2"
         :timestamps="processedTimestamps"
         :node-names="nodeNames"
         :mission-duration="missionTimeSeconds"
@@ -371,8 +371,8 @@ onUnmounted(() => {
         :past-node-density-factor="3"
         :future-node-density-factor="1"
       />
-      <TrapezoidGradient class="bottom-0 left-0 absolute z-1" />
-      <div class="flex gap-4 bottom-10px left-60px absolute z-30">
+      <TrapezoidGradient class="absolute bottom-0 left-0 z-1" />
+      <div class="absolute bottom-10px left-60px z-30 flex gap-4">
         <Gauge
           label="SPEED"
           unit="KM/H"
@@ -387,9 +387,9 @@ onUnmounted(() => {
         />
       </div>
 
-      <TrapezoidGradient class="bottom-0 right-0 absolute z-1" horizontal-flip />
+      <TrapezoidGradient class="absolute bottom-0 right-0 z-1" horizontal-flip />
       <!-- 修改：右下角 MAX-Q 显示区域，绑定到响应式引用 -->
-      <div class="font-saira pr-40px text-right flex flex-col h-180px w-550px bottom-0 right-0 justify-center absolute z-1">
+      <div class="absolute bottom-0 right-0 z-1 h-180px w-550px flex flex-col justify-center pr-40px text-right font-saira">
         <div class="text-30px font-600">
           {{ maxQTitle }}
         </div>

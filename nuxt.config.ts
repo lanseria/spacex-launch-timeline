@@ -66,6 +66,11 @@ export default defineNuxtConfig({
       routes: ['/'],
     },
   },
+  vite: {
+    optimizeDeps: {
+      include: ['es-toolkit'],
+    },
+  },
 
   eslint: {
     config: {

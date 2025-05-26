@@ -53,7 +53,7 @@ export function useSpaceTimeline() {
   const vehicleName = useLocalStorage<string>('spacex_vehicle_name', defaultConfig.vehicle)
   const currentSpeed = useLocalStorage<number>('spacex_telemetry_speed', defaultConfig.speed)
   const currentAltitude = useLocalStorage<number>('spacex_telemetry_altitude', defaultConfig.altitude)
-  const backgroundImageUrl = useLocalStorage<string>(
+  const backgroundImageUrl = useSessionStorage<string>(
     'spacex_persisted_background_image_url',
     defaultConfig.backgroundImageUrl,
   )
