@@ -349,7 +349,7 @@ onUnmounted(() => {
 
       <div class="fixed bottom-16px left-1/2 z-50 mx-auto max-w-md text-center font-400 font-saira -translate-x-1/2">
         <div
-          class="countdown text-42px text-white leading-tight"
+          class="text-42px text-white leading-tight tabular-nums"
         >
           {{ timerClock }}
         </div>
@@ -404,9 +404,6 @@ onUnmounted(() => {
 
 <style scoped>
 /* 样式保持不变 */
-.countdown {
-  font-variant-numeric: tabular-nums;
-}
 .input-field {
   @apply block rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-indigo-400 dark:focus:ring-offset-gray-900;
 }

@@ -56,10 +56,10 @@ const transform = computed(() => {
     <defs>
       <linearGradient :id="gradientId" x1="0%" y1="0%" x2="0%" y2="100%">
         <!-- From top: specified color, 70% opacity -->
-        <stop offset="0%" :style="{ stopColor: color, stopOpacity: 0.6 }" />
-        <stop offset="30%" :style="{ stopColor: color, stopOpacity: 0.5 }" />
+        <stop offset="0%" :style="{ stopColor: color, stopOpacity: 0.5 }" />
+        <stop offset="30%" :style="{ stopColor: color, stopOpacity: 0.3 }" />
         <!-- To middle: specified color, fully transparent -->
-        <stop offset="70%" :style="{ stopColor: color, stopOpacity: 0.2 }" />
+        <stop offset="70%" :style="{ stopColor: color, stopOpacity: 0.01 }" />
         <!-- To bottom: specified color, fully transparent -->
         <stop offset="100%" :style="{ stopColor: color, stopOpacity: 0 }" />
       </linearGradient>
