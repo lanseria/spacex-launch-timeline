@@ -85,12 +85,24 @@ function plotNodesOnCircle() {
   }
 
   // 3. 主指示圆弧
+  // 背景圆弧
+  const bgArc = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+  const bg_x1 = currentCircleCenterX + mainArcRadius * Math.cos(startAngle)
+  const bg_y1 = currentCircleCenterY + mainArcRadius * Math.sin(startAngle)
+  const bg_x2 = currentCircleCenterX + mainArcRadius * Math.cos(endAngle)
+  const bg_y2 = currentCircleCenterY + mainArcRadius * Math.sin(endAngle)
+  bgArc.setAttribute('d', `M ${bg_x1} ${bg_y1} A ${mainArcRadius} ${mainArcRadius} 0 0 1 ${bg_x2} ${bg_y2}`)
+  bgArc.setAttribute('stroke', '#aaaaaa')
+  bgArc.setAttribute('stroke-width', '2')
+  bgArc.setAttribute('fill', 'none')
+  svg.appendChild(bgArc)
+  // 显示半圆弧
   const mainArc = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-  const x1 = currentCircleCenterX + mainArcRadius * Math.cos(startAngle)
-  const y1 = currentCircleCenterY + mainArcRadius * Math.sin(startAngle)
-  const x2 = currentCircleCenterX + mainArcRadius * Math.cos(endAngle)
-  const y2 = currentCircleCenterY + mainArcRadius * Math.sin(endAngle)
-  mainArc.setAttribute('d', `M ${x1} ${y1} A ${mainArcRadius} ${mainArcRadius} 0 0 1 ${x2} ${y2}`)
+  const x1 = currentCircleCenterX + mainArcRadius * Math.cos(Math.PI / 2)
+  const y1 = currentCircleCenterY + mainArcRadius * Math.sin(Math.PI / 2)
+  const x2 = currentCircleCenterX + mainArcRadius * Math.cos(-Math.PI / 2)
+  const y2 = currentCircleCenterY + mainArcRadius * Math.sin(-Math.PI / 2)
+  mainArc.setAttribute('d', `M ${x1} ${y1} A ${mainArcRadius} ${mainArcRadius} 0 1 1 ${x2} ${y2}`)
   mainArc.setAttribute('stroke', '#FFFFFF')
   mainArc.setAttribute('stroke-width', '2')
   mainArc.setAttribute('fill', 'none')
@@ -181,7 +193,7 @@ function plotNodesOnCircle() {
     nodeOuterCircle.setAttribute('r', String(nodeOuterRadius))
     nodeOuterCircle.setAttribute('fill', '#000')
     nodeOuterCircle.setAttribute('stroke', '#FFF')
-    nodeOuterCircle.setAttribute('stroke-width', '1.5')
+    nodeOuterCircle.setAttribute('stroke-width', '1.8')
     svg.appendChild(nodeOuterCircle)
 
     if (timeRelativeToNow <= 0) {
@@ -209,7 +221,7 @@ function plotNodesOnCircle() {
     line.setAttribute('x2', String(lineEndX))
     line.setAttribute('y2', String(lineEndY))
     line.setAttribute('stroke', '#ccc')
-    line.setAttribute('stroke-width', '2.5')
+    line.setAttribute('stroke-width', '2')
     svg.appendChild(line)
 
     // 文字中心点 (This part remains the same)
@@ -292,7 +304,7 @@ watch(
 </script>
 
 <template>
-  <div class="flex w-full bottom-0 justify-center absolute overflow-hidden">
+  <div class="absolute bottom-0 w-full flex justify-center overflow-hidden">
     <!-- eslint-disable-next-line vue/html-self-closing -->
     <svg ref="svgEl" class="w-full" :width="effectiveSvgWidth" :height="effectiveSvgHeight"></svg>
   </div>

@@ -18,6 +18,10 @@ const props = defineProps({
     type: Number,
     default: 100,
   },
+  fractionDigits: {
+    type: Number,
+    default: 0,
+  },
 })
 // --- Configuration Constants ---
 const GAUGE_RADIUS = 70
@@ -28,7 +32,7 @@ const GAUGE_VISUAL_START_ANGLE = 255 // "7-8 o'clock" position
 const TOTAL_GAUGE_SWEEP_ANGLE = 210
 const CRITICAL_SWEEP_ANGLE = 180 // Angle (within the sweep) where the color changes
 
-const BACKGROUND_CIRCLE_PADDING = 5// Internal reactive state for the progress value
+const BACKGROUND_CIRCLE_PADDING = 8// Internal reactive state for the progress value
 const progressValue = ref(props.value)
 watch(() => props.value, (newValue) => {
   progressValue.value = Math.max(0, Math.min(props.maxValue, newValue))
@@ -160,7 +164,7 @@ const progressArcRedPath = computed(() => {
       <!-- Background Arc - Gray part -->
       <path
         :d="backgroundArcGrayPath"
-        class="stroke-gray-300 dark:stroke-gray-600"
+        class="stroke-gray-700"
         fill="none"
         :stroke-width="STROKE_WIDTH"
         stroke-linecap="butt"
@@ -169,7 +173,7 @@ const progressArcRedPath = computed(() => {
       <!-- Background Arc - Dark Red part -->
       <path
         :d="backgroundArcDarkRedPath"
-        class="stroke-red-800 dark:stroke-red-900"
+        class="stroke-red-900"
         fill="none"
         :stroke-width="STROKE_WIDTH"
         stroke-linecap="butt"
@@ -179,7 +183,7 @@ const progressArcRedPath = computed(() => {
       <path
         v-if="progressValue > 0 && whitePartSweep > 0.01"
         :d="progressArcWhitePath"
-        class="stroke-white dark:stroke-gray-100"
+        class="stroke-gray-100"
         fill="none"
         :stroke-width="STROKE_WIDTH"
         stroke-linecap="butt"
@@ -203,13 +207,13 @@ const progressArcRedPath = computed(() => {
         :y="cy"
         text-anchor="middle"
         dominant-baseline="central"
-        class="font-saira select-none fill-current"
+        class="select-none fill-current font-saira"
       >
         <!-- 标签 (顶部) -->
         <tspan
           :x="cx"
-          dy="-2.5em"
-          class="text-12px text-gray-300"
+          dy="-2.7em"
+          class="text-12px text-gray-400 font-400"
         >
           {{ props.label }}
         </tspan>
@@ -220,15 +224,15 @@ const progressArcRedPath = computed(() => {
           :y="cy"
           class="countdown text-42px text-white"
         >
-          {{ Math.round(progressValue) }}
+          {{ progressValue.toFixed(fractionDigits) }}
         </tspan>
 
         <!-- 单位 (底部) -->
         <tspan
           :x="cx"
           :y="cy"
-          dy="2.5em"
-          class="text-12px text-gray-300"
+          dy="2.7em"
+          class="text-12px text-gray-400 font-400"
         >
           {{ props.unit }}
         </tspan>

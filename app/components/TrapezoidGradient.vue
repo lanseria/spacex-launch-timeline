@@ -19,8 +19,6 @@ const props = withDefaults(defineProps<{
   horizontalFlip: false,
 })
 
-// Generate a unique ID for the gradient for this component instance
-// This helps avoid conflicts if you use multiple instances of this component on the same page.
 const gradientId = computed(() => `trapezoidVerticalGradient-${Math.random().toString(36).substring(2, 9)}`)
 
 // Calculate the effective radius, ensuring it's not too large for the dimensions
@@ -33,17 +31,6 @@ const pathD = computed(() => {
   const h = props.svgHeight
   const tw = props.topWidth // Top width of the trapezoid shape itself
   const bw = props.bottomWidth // Bottom width of the trapezoid shape itself
-
-  // Points for the standard (non-flipped) orientation
-  // P1: (0,0) - Left top
-  // P2_arc_start: (tw - r, 0) - Top right arc start
-  // P2_arc_end: (tw, r) - Top right arc end
-  // P3: (bw, h) - Bottom right
-  // P4: (0, h) - Bottom left
-
-  // If the shape is flipped, the origin for its points effectively shifts.
-  // The drawing commands remain relative to a 0,0 origin for the path itself,
-  // but the transform will place it correctly.
 
   // Path for the non-flipped version (rounded top-right)
   let d = `M 0 0` // Move to top-left
@@ -58,9 +45,6 @@ const pathD = computed(() => {
 
 const transform = computed(() => {
   if (props.horizontalFlip) {
-    // Scale by -1 in X, then translate by svgWidth to bring it back into view
-    // This flips the shape around its local Y-axis if it were at X=0.
-    // Since we want to flip it within the SVG canvas, we translate.
     return `translate(${props.svgWidth}, 0) scale(-1, 1)`
   }
   return ''
@@ -80,18 +64,6 @@ const transform = computed(() => {
         <stop offset="100%" :style="{ stopColor: color, stopOpacity: 0 }" />
       </linearGradient>
     </defs>
-
-    <!--
-      The path is drawn as if it's starting from 0,0.
-      If flipped, the `transform` attribute handles the mirroring.
-      The svgWidth for the path itself (bw) might be different from the props.svgWidth
-      if the user wants padding around the trapezoid.
-      Here, we assume the trapezoid's bottomWidth can define the needed width.
-    -->
     <path :d="pathD" :fill="`url(#${gradientId})`" :transform="transform" />
   </svg>
 </template>
-
-<style scoped>
-/* Add any component-specific styles here if needed */
-</style>

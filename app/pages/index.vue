@@ -384,6 +384,7 @@ onUnmounted(() => {
           unit="KM"
           :value="currentAltitude"
           :max-value="100"
+          :fraction-digits="1"
         />
       </div>
 
