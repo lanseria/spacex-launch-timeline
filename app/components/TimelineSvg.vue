@@ -30,6 +30,13 @@ const distCenterToChord = computed(() => {
 const circleCenterY = computed(() => effectiveSvgHeight.value + distCenterToChord.value)
 const circleCenterX = computed(() => effectiveSvgWidth.value / 2)
 
+// Helper function for ease-in-ease-out
+function easeInOutSine(t: number): number {
+  // Ensure t is clamped between 0 and 1
+  const clampedT = Math.max(0, Math.min(1, t))
+  return 0.5 * (1 - Math.cos(Math.PI * clampedT))
+}
+
 function plotNodesOnCircle() {
   const svg = svgEl.value
   if (!svg)
@@ -133,25 +140,9 @@ function plotNodesOnCircle() {
   const safePastDensityFactor = Math.max(0.1, props.pastNodeDensityFactor ?? 1.0)
   const safeFutureDensityFactor = Math.max(0.1, props.futureNodeDensityFactor ?? 1.0)
 
-  const animationStartTime = -10 // Start animation at T-10s
-  const animationDuration = 5 // Animation lasts 5 seconds
+  const animationStartTime = -20 // Start animation at T-20s
+  const animationDuration = 7 // Animation lasts 7 seconds
   const animationEndTime = animationStartTime + animationDuration
-
-  // Determine the target density for events that are currently in the "past" slots
-  let targetDensityForPastSlots: number
-  if (currentTimelineTime >= animationStartTime && currentTimelineTime <= animationEndTime) {
-    // During animation: interpolate from past density to future density
-    const progress = (currentTimelineTime - animationStartTime) / animationDuration
-    targetDensityForPastSlots = safePastDensityFactor * (1 - progress) + safeFutureDensityFactor * progress
-  }
-  else if (currentTimelineTime > animationEndTime) {
-    // After animation: past slots use future density
-    targetDensityForPastSlots = safeFutureDensityFactor
-  }
-  else { // currentTimelineTime < animationStartTime
-    // Before animation starts: past slots use the high past density
-    targetDensityForPastSlots = safePastDensityFactor
-  }
 
   for (let i = 0; i < numEvents; i++) {
     const eventAbsoluteTime = props.timestamps[i]!
@@ -161,19 +152,22 @@ function plotNodesOnCircle() {
     let applicableDensityFactor: number
 
     if (currentTimelineTime < animationStartTime) {
-      // ---- Behavior before -20s ----
-      // ALL nodes (regardless of being past or future relative to currentTimelineTime) use the high density factor.
+      // ---- Behavior before animation starts (e.g., currentTimelineTime < -20s) ----
+      // ALL nodes use the high past density factor.
       applicableDensityFactor = safePastDensityFactor
     }
-    else {
-      // ---- Behavior at or after -20s ----
-      // Density depends on whether the node is in the past or future *relative to currentTimelineTime*.
-      if (timeRelativeToNow < 0) { // Event is in the past
-        applicableDensityFactor = targetDensityForPastSlots
-      }
-      else { // Event is in the future or at NOW
-        applicableDensityFactor = safeFutureDensityFactor
-      }
+    else if (currentTimelineTime >= animationStartTime && currentTimelineTime <= animationEndTime) {
+      // ---- Behavior DURING animation (e.g., -20s <= currentTimelineTime <= -13s) ----
+      // ALL nodes interpolate their density from safePastDensityFactor to safeFutureDensityFactor.
+      const linearProgress = (currentTimelineTime - animationStartTime) / animationDuration
+      const easedProgress = easeInOutSine(linearProgress) // Apply easing
+
+      applicableDensityFactor = safePastDensityFactor * (1 - easedProgress) + safeFutureDensityFactor * easedProgress
+    }
+    else { // currentTimelineTime > animationEndTime (e.g., currentTimelineTime > -13s)
+      // ---- Behavior AFTER animation ----
+      // ALL nodes use the future density factor.
+      applicableDensityFactor = safeFutureDensityFactor
     }
 
     const angularOffsetBase = (timeRelativeToNow / halfMissionDuration) * Math.PI
@@ -196,7 +190,7 @@ function plotNodesOnCircle() {
     nodeOuterCircle.setAttribute('stroke-width', '1.8')
     svg.appendChild(nodeOuterCircle)
 
-    if (timeRelativeToNow <= 0) {
+    if (timeRelativeToNow <= 0) { // Inner dot only for past or current events
       const innerDotPast = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
       innerDotPast.setAttribute('cx', String(nodeCenterX))
       innerDotPast.setAttribute('cy', String(nodeCenterY))
@@ -224,59 +218,45 @@ function plotNodesOnCircle() {
     line.setAttribute('stroke-width', '2')
     svg.appendChild(line)
 
-    // 文字中心点 (This part remains the same)
+    // 文字中心点
     const textCenterX = nodeCenterX + textDirectionMultiplier * (nodeDotRadius + lineLength + lineToTextGap) * Math.cos(angleRad)
     const textCenterY = nodeCenterY + textDirectionMultiplier * (nodeDotRadius + lineLength + lineToTextGap) * Math.sin(angleRad)
 
     const textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text')
     textElement.setAttribute('x', String(textCenterX))
-    textElement.setAttribute('y', String(textCenterY)) // Y is the geometric center of the text block
+    textElement.setAttribute('y', String(textCenterY))
 
     const textRotationDeg = angleRad * (180 / Math.PI) + 90
     textElement.setAttribute('transform', `rotate(${textRotationDeg}, ${textCenterX}, ${textCenterY})`)
 
-    textElement.setAttribute('text-anchor', 'middle') // Horizontally centers the text
-    textElement.setAttribute('alignment-baseline', isOutsideText ? 'text-before-edge' : 'text-after-edge') // Horizontally centers the text
-    // dominant-baseline="central" makes the y attribute the true vertical center of the text content.
-    // This helps in centering the multi-line block.
+    textElement.setAttribute('text-anchor', 'middle')
+    textElement.setAttribute('alignment-baseline', isOutsideText ? 'text-before-edge' : 'text-after-edge')
     textElement.setAttribute('dominant-baseline', isOutsideText ? 'text-after-edge' : 'text-before-edge')
     textElement.setAttribute('fill', '#fff')
-    textElement.setAttribute('font-size', '10px') // Assuming 10px font size
+    textElement.setAttribute('font-size', '10px')
     textElement.setAttribute('font-family', 'Saira')
     textElement.setAttribute('font-weight', '500')
-    // textElement.textContent = eventName; // We will use tspans instead
 
     const words = eventName.split(' ')
     const numLines = words.length
-    const lineHeightEm = 1.2 // Factor for line height (e.g., 1.2 * font-size)
+    const lineHeightEm = 1.2
 
     if (numLines > 0) {
       words.forEach((word, index) => {
-        // Optional: Skip creating tspan for empty words if eventName might have multiple spaces
-        // e.g. if (word === "" && numLines > 1) return;
-
         const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan')
-        // Each tspan needs its own x attribute for text-anchor="middle" to apply correctly per line
         tspan.setAttribute('x', String(textCenterX))
         tspan.textContent = word
 
         if (index === 0) {
-          // For the first line, calculate dy to position the start of the text block
-          // such that the entire block is centered around textCenterY.
-          // (numLines - 1) / 2 gives the number of line heights from the center to the top/bottom edge of the block.
           const firstLineDy = -((numLines - 1) / 2) * lineHeightEm
           tspan.setAttribute('dy', `${firstLineDy}em`)
         }
         else {
-          // Subsequent lines are positioned relative to the previous line.
           tspan.setAttribute('dy', `${lineHeightEm}em`)
         }
         textElement.appendChild(tspan)
       })
     }
-    // If eventName could be empty and numLines is 0, textElement would be empty.
-    // This is generally fine.
-
     svg.appendChild(textElement)
   }
 }
