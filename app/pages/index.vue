@@ -252,22 +252,22 @@ onUnmounted(() => {
             从T减多少秒开始倒计时，请输入正数。例如60代表从 T-60秒 开始。计时器运行时不可修改。
           </small>
           <h2 class="mb-2 text-lg font-semibold">
-            SVG时间轴总时长 (秒)
+            时间轴总时长 (秒)
           </h2>
           <input
             v-model.number="missionTimeRaw"
             type="number"
             placeholder="例如: 3600"
             class="input-field w-full dark:bg-gray-700 dark:text-white"
-            aria-label="SVG时间轴总时长 (秒)"
+            aria-label="时间轴总时长 (秒)"
           >
           <small class="text-xs text-gray-500 dark:text-gray-400">
-            定义SVG圆周代表的总秒数。例如3600秒，若T-0在中心，则显示范围约 T±1800秒。
+            定义圆周代表的总秒数。例如3600秒，若T-0在中心，则显示范围约 T±1800秒。
           </small>
         </div>
 
         <!-- 卡片 3: 发射倒计时起点 & 任务配置 -->
-        <div v-if="showPanel" class="exclude-from-screenshot max-w-full border border-gray-200 rounded-lg bg-black/50 p-6 dark:border-gray-700">
+        <div v-if="showPanel" class="exclude-from-screenshot relative max-w-full border border-gray-200 rounded-lg bg-black/50 p-6 dark:border-gray-700">
           <h2 class="mb-2 text-lg font-semibold">
             任务与飞行数据配置
           </h2>
@@ -328,7 +328,7 @@ onUnmounted(() => {
                 aria-label="选择本地背景图片"
                 @click="openFileDialog()"
               >
-                选择本地图片 (临时预览)
+                选择本地图片
               </button>
               <button
                 type="button"
@@ -343,6 +343,22 @@ onUnmounted(() => {
             <small v-if="currentFile" class="mt-1 block text-xs text-gray-400">
               当前预览: {{ currentFile.name }} (本地文件不会被保存) 可以点击背景隐藏面板
             </small>
+          </div>
+
+          <!-- Author Signature -->
+          <div class="absolute bottom-4 right-4 z-50 text-right text-xs text-gray-400/75 font-sans">
+            <p>作者: 爱吃包子的超</p>
+            <p>
+              B站主页:
+              <a
+                href="https://space.bilibili.com/8487409"
+                target="_blank"
+                rel="noopener noreferrer"
+                class="underline hover:text-gray-200"
+              >
+                B站主页
+              </a>
+            </p>
           </div>
         </div>
       </div>
