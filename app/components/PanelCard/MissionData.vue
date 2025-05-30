@@ -60,18 +60,18 @@ onUnmounted(() => {
 </script>
 
 <template>
-  <div class="exclude-from-screenshot relative max-w-full border border-gray-200 rounded-lg bg-black/50 p-6 dark:border-gray-700">
+  <div class="relative max-w-full border border-gray-700 rounded-lg bg-black/50 p-6">
     <h2 class="mb-2 text-lg font-semibold">
       任务与飞行数据配置
     </h2>
     <div class="space-y-3">
       <div>
         <label for="missionNameInputCard3" class="mb-1 block text-sm text-gray-300 font-medium">任务名称</label>
-        <input id="missionNameInputCard3" v-model="missionName" type="text" class="input-field w-full dark:bg-gray-700 dark:text-white" aria-label="任务名称">
+        <input id="missionNameInputCard3" v-model="missionName" type="text" class="input-field w-full bg-gray-700 text-white" aria-label="任务名称">
       </div>
       <div>
         <label for="vehicleNameInputCard3" class="mb-1 block text-sm text-gray-300 font-medium">运载工具</label>
-        <input id="vehicleNameInputCard3" v-model="vehicleName" type="text" class="input-field w-full dark:bg-gray-700 dark:text-white" aria-label="运载工具名称">
+        <input id="vehicleNameInputCard3" v-model="vehicleName" type="text" class="input-field w-full bg-gray-700 text-white" aria-label="运载工具名称">
       </div>
       <div>
         <label for="speedInputCard3" class="mb-1 block text-sm text-gray-300 font-medium">当前速度 (KM/H)</label>
@@ -81,7 +81,7 @@ onUnmounted(() => {
             v-model.number="manualSpeed"
             type="number"
             :max="30000"
-            class="input-field flex-grow dark:bg-gray-700 dark:text-white"
+            class="input-field flex-grow bg-gray-700 text-white"
             aria-label="当前速度 (KM/H)"
             :disabled="speedProfile && speedProfile.length > 0"
           >
@@ -106,7 +106,7 @@ onUnmounted(() => {
             v-model.number="manualAltitude"
             type="number"
             :max="1000"
-            class="input-field flex-grow dark:bg-gray-700 dark:text-white"
+            class="input-field flex-grow bg-gray-700 text-white"
             aria-label="当前高度 (KM)"
             :disabled="altitudeProfile && altitudeProfile.length > 0"
           >

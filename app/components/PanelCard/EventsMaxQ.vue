@@ -12,7 +12,7 @@ const {
 </script>
 
 <template>
-  <div class="exclude-from-screenshot max-w-full flex flex-col border border-gray-200 rounded-lg bg-black/50 p-6 space-y-4 dark:border-gray-700">
+  <div class="max-w-full flex flex-col border border-gray-700 rounded-lg bg-black/50 p-6 space-y-4">
     <div>
       <h2 class="mb-4 text-lg font-semibold">
         添加事件 (单位: 秒)
@@ -23,14 +23,14 @@ const {
             v-model.number="timestamps[i]"
             type="number"
             placeholder="例如: -60"
-            class="input-field w-80px flex-grow dark:bg-gray-700 dark:text-white"
+            class="input-field w-80px flex-grow bg-gray-700 text-white"
             :aria-label="`事件 ${i + 1} 的时间戳 (秒)`"
           >
           <input
             v-model="nodeNames[i]"
             type="text"
             placeholder="事件名称"
-            class="input-field w-full flex-grow dark:bg-gray-700 dark:text-white"
+            class="input-field w-full flex-grow bg-gray-700 text-white"
             :aria-label="`事件 ${i + 1} 的名称`"
           >
           <button
@@ -63,7 +63,7 @@ const {
             id="maxQTitleInputCard1"
             v-model="maxQTitle"
             type="text"
-            class="input-field w-full dark:bg-gray-700 dark:text-white"
+            class="input-field w-full bg-gray-700 text-white"
             aria-label="MAX-Q 标题"
           >
         </div>
@@ -73,7 +73,7 @@ const {
             id="maxQLine1InputCard1"
             v-model="maxQLine1"
             type="text"
-            class="input-field w-full dark:bg-gray-700 dark:text-white"
+            class="input-field w-full bg-gray-700 text-white"
             aria-label="MAX-Q 描述行 1"
           >
         </div>
@@ -83,7 +83,7 @@ const {
             id="maxQLine2InputCard1"
             v-model="maxQLine2"
             type="text"
-            class="input-field w-full dark:bg-gray-700 dark:text-white"
+            class="input-field w-full bg-gray-700 text-white"
             aria-label="MAX-Q 描述行 2"
           >
         </div>
@@ -93,7 +93,7 @@ const {
             id="maxQLine3InputCard1"
             v-model="maxQLine3"
             type="text"
-            class="input-field w-full dark:bg-gray-700 dark:text-white"
+            class="input-field w-full bg-gray-700 text-white"
             aria-label="MAX-Q 描述行 3"
           >
         </div>

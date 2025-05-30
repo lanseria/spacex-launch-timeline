@@ -1,9 +1,10 @@
 /* assets/css/main.css */
 html,
 body {
-  min-width: 1920px;
   padding: 0;
   margin: 0;
+  color: #fff;
+  background: #000000;
 }
 
 a {
@@ -18,16 +19,6 @@ a:hover, a:active, a:focus {
   box-sizing: border-box;
 }
 
-/* Keep relevant styles or import global ones */
-.input-field {
-  --at-apply: 'block rounded-md border border-gray-600 px-3 py-2 shadow-sm sm:text-sm bg-gray-800 text-white focus:border-indigo-400 focus:ring-offset-gray-900';
-}
-.btn-action {
-  --at-apply: 'rounded-md border border-transparent px-4 py-2 text-base font-medium text-white shadow-sm focus:ring-2 focus:ring-offset-2 focus:outline-none';
-}
-.btn-action:disabled {
-  --at-apply: 'cursor-not-allowed bg-gray-700 opacity-70';
-}
 .node_list_scrollbar::-webkit-scrollbar {
   width: 8px;
   -webkit-appearance: none;

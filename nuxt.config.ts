@@ -36,10 +36,11 @@ export default defineNuxtConfig({
   ],
 
   colorMode: {
-    classSuffix: '',
+    preference: 'dark',
+    fallback: 'dark',
   },
   devServer: {
-    port: 3001,
+    port: 10631,
   },
 
   future: {
