@@ -1,0 +1,19 @@
+[
+  { "time": -300, "altitude": 0.0 },
+  { "time": -60, "altitude": 0.0 },
+  { "time": 0, "altitude": 0.0 },
+  { "time": 10, "altitude": 0.5 },
+  { "time": 30, "altitude": 4.1 },
+  { "time": 50, "altitude": 10.2 },
+  { "time": 72, "altitude": 18.5 },
+  { "time": 90, "altitude": 30.3 },
+  { "time": 120, "altitude": 55.8 },
+  { "time": 145, "altitude": 78.0 },
+  { "time": 155, "altitude": 85.1 },
+  { "time": 180, "altitude": 105.0 },
+  { "time": 240, "altitude": 140.2 },
+  { "time": 300, "altitude": 165.5 },
+  { "time": 400, "altitude": 180.0 },
+  { "time": 490, "altitude": 192.3 },
+  { "time": 530, "altitude": 190.0 }
+]

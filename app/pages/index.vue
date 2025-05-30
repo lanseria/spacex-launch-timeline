@@ -4,7 +4,6 @@ const {
   missionName,
   vehicleName,
   currentSpeed,
-  currentAltitude,
   backgroundImageUrl,
   showPanel,
   timestamps,
@@ -25,17 +24,29 @@ const {
   resetTimer,
   jumpToTime,
   restoreBackgroundImage,
-  // 新增：解构 MAX-Q 文本引用
   maxQTitle,
   maxQLine1,
   maxQLine2,
   maxQLine3,
+  manualAltitude,
+  altitudeProfile,
+  currentAltitude,
+  loadAltitudeProfile, // 这个函数仍然用于用户选择文件导入
+  clearAltitudeProfile,
 } = useSpaceTimeline()
 
 const panelRef = useTemplateRef<HTMLElement>('panelRef')
-onClickOutside(panelRef, () => {
-  showPanel.value = !showPanel.value
-})
+const altitudeModalRef = useTemplateRef<HTMLElement>('altitudeModalRef')
+
+const showAltitudeModal = ref(false)
+const altitudeFileError = ref<string | null>(null)
+
+onClickOutside(panelRef, (event) => {
+  if (showAltitudeModal.value && altitudeModalRef.value?.contains(event.target as Node))
+    return
+  if (showPanel.value)
+    showPanel.value = false
+}, { ignore: [altitudeModalRef] })
 
 const controlButtonText = computed(() => {
   if (!isStarted.value)
@@ -45,36 +56,98 @@ const controlButtonText = computed(() => {
   return '暂停'
 })
 
-const { files: selectedFiles, open: openFileDialog, reset: resetFileDialog } = useFileDialog({
+const { files: selectedBackgroundFiles, open: openBackgroundFileDialog, reset: resetBackgroundFileDialog } = useFileDialog({
   accept: 'image/*',
   multiple: false,
 })
+const currentBackgroundFile = computed(() => selectedBackgroundFiles.value?.[0] || null)
+const localBackgroundFileObjectUrl = useObjectUrl(currentBackgroundFile)
 
-const currentFile = computed(() => selectedFiles.value?.[0] || null)
-const localFileObjectUrl = useObjectUrl(currentFile)
-
-watch(localFileObjectUrl, (newObjectUrl) => {
+watch(localBackgroundFileObjectUrl, (newObjectUrl) => {
   if (newObjectUrl) {
-    if (
-      backgroundImageUrl.value?.startsWith('blob:')
-      && backgroundImageUrl.value !== newObjectUrl
-    ) {
+    if (backgroundImageUrl.value?.startsWith('blob:') && backgroundImageUrl.value !== newObjectUrl)
       URL.revokeObjectURL(backgroundImageUrl.value)
-    }
     backgroundImageUrl.value = newObjectUrl
     triggerRef(backgroundImageUrl)
   }
 })
 
 function handleRestoreBackgroundImage() {
-  if (backgroundImageUrl.value?.startsWith('blob:')) {
-    resetFileDialog()
-  }
+  if (backgroundImageUrl.value?.startsWith('blob:'))
+    resetBackgroundFileDialog()
   restoreBackgroundImage()
 }
 
+const { files: selectedAltitudeFiles, open: openAltitudeFileDialog, reset: resetAltitudeFileDialog } = useFileDialog({
+  accept: '.json',
+  multiple: false,
+})
+
+watch(selectedAltitudeFiles, async (newFiles) => {
+  const file = newFiles?.[0]
+  if (file) {
+    altitudeFileError.value = null
+    try {
+      await loadAltitudeProfile(file) // 使用 composable 中的函数
+    }
+    catch (error: any) {
+      altitudeFileError.value = error.message || '加载或解析高度数据文件失败。'
+      console.error('加载高度数据失败:', error)
+    }
+    finally {
+      resetAltitudeFileDialog()
+    }
+  }
+})
+
+function handleImportAltitudeData() {
+  altitudeFileError.value = null
+  openAltitudeFileDialog()
+}
+
+// 新增：加载 Falcon 9 示例数据的函数
+async function handleLoadFalcon9SampleData() {
+  altitudeFileError.value = null
+  try {
+    const response = await fetch('/assets/data/falcon9_altitude_profile.json')
+    if (!response.ok)
+      throw new Error(`无法加载示例数据: ${response.statusText}`)
+
+    const sampleData = await response.json()
+
+    // 基础校验 (与 loadAltitudeProfile 中的类似)
+    if (Array.isArray(sampleData) && sampleData.every(p => typeof p.time === 'number' && typeof p.altitude === 'number')) {
+      altitudeProfile.value = sampleData as AltitudePoint[]
+      // eslint-disable-next-line no-console
+      console.log('Falcon 9 示例高度数据加载成功:', altitudeProfile.value)
+    }
+    else {
+      throw new Error('示例数据格式无效。')
+    }
+  }
+  catch (error: any) {
+    altitudeFileError.value = error.message || '加载 Falcon 9 示例数据失败。'
+    console.error('加载 Falcon 9 示例数据失败:', error)
+  }
+}
+
+function handleClearAltitudeData() {
+  clearAltitudeProfile()
+  altitudeFileError.value = null
+}
+
+function handleOpenAltitudeModal() {
+  showAltitudeModal.value = true
+}
+
+function handleCloseAltitudeModal() {
+  showAltitudeModal.value = false
+  altitudeFileError.value = null
+}
+
 onUnmounted(() => {
-  resetFileDialog()
+  resetBackgroundFileDialog()
+  resetAltitudeFileDialog()
 })
 </script>
 
@@ -91,20 +164,19 @@ onUnmounted(() => {
         </p>
       </div>
 
-      <div ref="panelRef" class="relative z-20 grid grid-cols-3 mx-auto my-8 w-1200px justify-center gap-4">
+      <div v-show="showPanel" ref="panelRef" class="relative z-20 grid grid-cols-3 mx-auto my-8 w-1200px justify-center gap-4">
         <!-- 卡片 1: 添加事件 & MAX-Q 配置 -->
-        <div v-if="showPanel" class="exclude-from-screenshot max-w-full flex flex-col border border-gray-200 rounded-lg bg-black/50 p-6 space-y-4 dark:border-gray-700">
+        <div class="exclude-from-screenshot max-w-full flex flex-col border border-gray-200 rounded-lg bg-black/50 p-6 space-y-4 dark:border-gray-700">
           <div>
             <h2 class="mb-4 text-lg font-semibold">
               添加事件 (单位: 秒)
             </h2>
-            <div class="node_list_scrollbar max-h-[200px] overflow-y-auto pr-2">
-              <!-- pr-2 for scrollbar space -->
+            <div class="node_list_scrollbar max-h-[150px] overflow-y-auto pr-2">
               <div v-for="(timestamp, i) in timestamps" :key="i" class="mb-2 flex items-center space-x-2">
                 <input
                   v-model.number="timestamps[i]"
                   type="number"
-                  placeholder="例如: -60, 0, 120"
+                  placeholder="例如: -60"
                   class="input-field w-80px flex-grow dark:bg-gray-700 dark:text-white"
                   :aria-label="`事件 ${i + 1} 的时间戳 (秒)`"
                 >
@@ -133,19 +205,18 @@ onUnmounted(() => {
               + 添加事件
             </button>
           </div>
-
+          <div class="my-1 border-t border-gray-600" />
           <div>
             <h2 class="mb-2 text-lg font-semibold">
               MAX-Q 显示文本配置
             </h2>
-            <div class="space-y-2">
+            <div class="space-y-1">
               <div>
                 <label for="maxQTitleInput" class="mb-1 block text-sm text-gray-300 font-medium">标题</label>
                 <input
                   id="maxQTitleInput"
                   v-model="maxQTitle"
                   type="text"
-                  placeholder="例如: MAX-Q"
                   class="input-field w-full dark:bg-gray-700 dark:text-white"
                   aria-label="MAX-Q 标题"
                 >
@@ -156,7 +227,6 @@ onUnmounted(() => {
                   id="maxQLine1Input"
                   v-model="maxQLine1"
                   type="text"
-                  placeholder="例如: MAXIMUM DYNAMIC PRESSURE"
                   class="input-field w-full dark:bg-gray-700 dark:text-white"
                   aria-label="MAX-Q 描述行 1"
                 >
@@ -167,7 +237,6 @@ onUnmounted(() => {
                   id="maxQLine2Input"
                   v-model="maxQLine2"
                   type="text"
-                  placeholder="例如: THIS IS THE LARGEST AMOUNT OF STRESS"
                   class="input-field w-full dark:bg-gray-700 dark:text-white"
                   aria-label="MAX-Q 描述行 2"
                 >
@@ -178,7 +247,6 @@ onUnmounted(() => {
                   id="maxQLine3Input"
                   v-model="maxQLine3"
                   type="text"
-                  placeholder="例如: EXERTED ON THE VEHICLE"
                   class="input-field w-full dark:bg-gray-700 dark:text-white"
                   aria-label="MAX-Q 描述行 3"
                 >
@@ -188,7 +256,7 @@ onUnmounted(() => {
         </div>
 
         <!-- 卡片 2: 控制 & SVG总时长 -->
-        <div v-if="showPanel" class="exclude-from-screenshot max-w-full flex-1 border border-gray-200 rounded-lg bg-black/50 p-6 dark:border-gray-700">
+        <div class="exclude-from-screenshot max-w-full flex-1 border border-gray-200 rounded-lg bg-black/50 p-6 dark:border-gray-700">
           <h2 class="mb-2 text-lg font-semibold">
             控制
           </h2>
@@ -219,7 +287,7 @@ onUnmounted(() => {
             <input
               v-model.number="jumpTargetTimeRaw"
               type="number"
-              placeholder="例如: -30, 0, 120"
+              placeholder="例如: -30"
               class="input-field flex-grow dark:bg-gray-700 dark:text-white"
               aria-label="跳转到的时间点 (秒)"
               @keyup.enter="jumpToTime"
@@ -243,13 +311,13 @@ onUnmounted(() => {
           <input
             v-model.number="timeValueRaw"
             type="number"
-            placeholder="例如: 60 (从T-60秒开始)"
+            placeholder="例如: 60"
             class="input-field w-full dark:bg-gray-700 dark:text-white"
             aria-label="发射倒计时秒数 (正数)"
             :disabled="isStarted"
           >
           <small class="mb-4 block text-xs text-gray-500 dark:text-gray-400">
-            从T减多少秒开始倒计时，请输入正数。例如60代表从 T-60秒 开始。计时器运行时不可修改。
+            从T减多少秒开始倒计时。例如60代表 T-60秒。
           </small>
           <h2 class="mb-2 text-lg font-semibold">
             时间轴总时长 (秒)
@@ -262,37 +330,23 @@ onUnmounted(() => {
             aria-label="时间轴总时长 (秒)"
           >
           <small class="text-xs text-gray-500 dark:text-gray-400">
-            定义圆周代表的总秒数。例如3600秒，若T-0在中心，则显示范围约 T±1800秒。
+            定义圆周代表的总秒数。例3600秒, T-0在中心。
           </small>
         </div>
 
-        <!-- 卡片 3: 发射倒计时起点 & 任务配置 -->
-        <div v-if="showPanel" class="exclude-from-screenshot relative max-w-full border border-gray-200 rounded-lg bg-black/50 p-6 dark:border-gray-700">
+        <!-- 卡片 3: 任务配置 & 高度曲线 -->
+        <div class="exclude-from-screenshot relative max-w-full border border-gray-200 rounded-lg bg-black/50 p-6 dark:border-gray-700">
           <h2 class="mb-2 text-lg font-semibold">
             任务与飞行数据配置
           </h2>
           <div class="space-y-3">
             <div>
               <label for="missionNameInput" class="mb-1 block text-sm text-gray-300 font-medium">任务名称</label>
-              <input
-                id="missionNameInput"
-                v-model="missionName"
-                type="text"
-                placeholder="例如: Starlink"
-                class="input-field w-full dark:bg-gray-700 dark:text-white"
-                aria-label="任务名称"
-              >
+              <input id="missionNameInput" v-model="missionName" type="text" class="input-field w-full dark:bg-gray-700 dark:text-white" aria-label="任务名称">
             </div>
             <div>
               <label for="vehicleNameInput" class="mb-1 block text-sm text-gray-300 font-medium">运载工具</label>
-              <input
-                id="vehicleNameInput"
-                v-model="vehicleName"
-                type="text"
-                placeholder="例如: Falcon 9 Block 5"
-                class="input-field w-full dark:bg-gray-700 dark:text-white"
-                aria-label="运载工具名称"
-              >
+              <input id="vehicleNameInput" v-model="vehicleName" type="text" class="input-field w-full dark:bg-gray-700 dark:text-white" aria-label="运载工具名称">
             </div>
             <div>
               <label for="speedInput" class="mb-1 block text-sm text-gray-300 font-medium">当前速度 (KM/H)</label>
@@ -300,8 +354,7 @@ onUnmounted(() => {
                 id="speedInput"
                 v-model.number="currentSpeed"
                 type="number"
-                :max="10000"
-                placeholder="例如: 7501"
+                :max="30000"
                 class="input-field w-full dark:bg-gray-700 dark:text-white"
                 aria-label="当前速度 (KM/H)"
               >
@@ -310,23 +363,35 @@ onUnmounted(() => {
               <label for="altitudeInput" class="mb-1 block text-sm text-gray-300 font-medium">当前高度 (KM)</label>
               <input
                 id="altitudeInput"
-                v-model.number="currentAltitude"
+                v-model.number="manualAltitude"
                 type="number"
-                :max="100"
-                placeholder="例如: 64"
+                :max="1000"
                 class="input-field w-full dark:bg-gray-700 dark:text-white"
                 aria-label="当前高度 (KM)"
+                :disabled="altitudeProfile && altitudeProfile.length > 0"
               >
+              <small v-if="altitudeProfile && altitudeProfile.length > 0" class="mt-1 block text-xs text-yellow-400">
+                高度由导入的曲线数据控制。
+              </small>
             </div>
-            <h2 class="mb-2 text-lg font-semibold">
+            <button
+              type="button"
+              class="btn-action w-full bg-purple-600 hover:bg-purple-700"
+              aria-label="配置高度曲线数据"
+              @click="handleOpenAltitudeModal"
+            >
+              配置高度曲线
+            </button>
+
+            <h2 class="mb-2 pt-2 text-lg font-semibold">
               页面背景图
             </h2>
-            <div class="mt-3 flex space-x-2">
+            <div class="flex space-x-2">
               <button
                 type="button"
                 class="btn-action flex-1 bg-sky-500 hover:bg-sky-600"
                 aria-label="选择本地背景图片"
-                @click="openFileDialog()"
+                @click="openBackgroundFileDialog()"
               >
                 选择本地图片
               </button>
@@ -334,18 +399,20 @@ onUnmounted(() => {
                 type="button"
                 class="btn-action flex-1 bg-orange-500 hover:bg-orange-600"
                 aria-label="还原背景图"
-                :disabled="(!selectedFiles || selectedFiles.length === 0) && !backgroundImageUrl?.startsWith('blob:')"
+                :disabled="(!currentBackgroundFile) && !backgroundImageUrl?.startsWith('blob:')"
                 @click="handleRestoreBackgroundImage"
               >
                 还原背景
               </button>
             </div>
-            <small v-if="currentFile" class="mt-1 block text-xs text-gray-400">
-              当前预览: {{ currentFile.name }} (本地文件不会被保存) 可以点击背景隐藏面板
+            <small v-if="currentBackgroundFile" class="mt-1 block text-xs text-gray-400">
+              当前预览: {{ currentBackgroundFile.name }} (本地文件不会被保存)
+            </small>
+            <small v-else-if="backgroundImageUrl?.startsWith('blob:')" class="mt-1 block text-xs text-gray-400">
+              当前为本地预览背景 (不会被保存)
             </small>
           </div>
 
-          <!-- Author Signature -->
           <div class="absolute bottom-4 right-4 z-50 text-right text-xs text-gray-400/75 font-sans">
             <p>作者: 爱吃包子的超</p>
             <p>
@@ -362,6 +429,11 @@ onUnmounted(() => {
           </div>
         </div>
       </div>
+      <div
+        class="fixed inset-0 z-0"
+        aria-hidden="true"
+        @click="() => { if (!showAltitudeModal) showPanel = !showPanel }"
+      />
 
       <div class="fixed bottom-16px left-1/2 z-50 mx-auto max-w-md text-center font-400 font-saira -translate-x-1/2">
         <div
@@ -393,19 +465,18 @@ onUnmounted(() => {
           label="SPEED"
           unit="KM/H"
           :value="currentSpeed"
-          :max-value="10000"
+          :max-value="30000"
         />
         <Gauge
           label="ALTITUDE"
           unit="KM"
           :value="currentAltitude"
-          :max-value="100"
+          :max-value="700"
           :fraction-digits="1"
         />
       </div>
 
       <TrapezoidGradient class="absolute bottom-0 right-0 z-1" horizontal-flip />
-      <!-- 修改：右下角 MAX-Q 显示区域，绑定到响应式引用 -->
       <div class="absolute bottom-0 right-0 z-1 h-180px w-550px flex flex-col justify-center pr-40px text-right font-saira">
         <div class="text-30px font-600">
           {{ maxQTitle }}
@@ -415,35 +486,111 @@ onUnmounted(() => {
         <div>{{ maxQLine3 }}</div>
       </div>
     </div>
+
+    <Teleport to="body">
+      <div v-if="showAltitudeModal" class="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm" @click.self="handleCloseAltitudeModal">
+        <div ref="altitudeModalRef" class="exclude-from-screenshot m-4 max-w-lg w-full border border-gray-700 rounded-lg bg-gray-800 p-6 text-white shadow-xl">
+          <h2 class="mb-4 text-xl font-semibold">
+            高度曲线配置
+          </h2>
+
+          <div v-if="!altitudeProfile || altitudeProfile.length === 0" class="space-y-4">
+            <p class="text-gray-300">
+              当前未导入高度数据。请导入一个 JSON 文件，或加载内置示例数据。
+            </p>
+            <p class="text-sm text-gray-400">
+              JSON 格式示例: `[{"time": 0, "altitude": 0.0}, ...]`
+            </p>
+            <div class="grid grid-cols-1 gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                class="btn-action w-full bg-blue-600 hover:bg-blue-700"
+                @click="handleImportAltitudeData"
+              >
+                导入本地 JSON
+              </button>
+              <button
+                type="button"
+                class="btn-action w-full bg-teal-600 hover:bg-teal-700"
+                @click="handleLoadFalcon9SampleData"
+              >
+                加载 Falcon 9 示例
+              </button>
+            </div>
+          </div>
+          <div v-else class="space-y-4">
+            <p class="text-gray-300">
+              已导入的高度数据点：
+            </p>
+            <div class="node_list_scrollbar max-h-[200px] overflow-y-auto border border-gray-700 rounded-md bg-gray-900/50 p-3">
+              <ul>
+                <li v-for="(point, index) in altitudeProfile" :key="index" class="flex justify-between py-1 text-sm">
+                  <span>时间 (T{{ point.time >= 0 ? '+' : '' }}{{ point.time }}s):</span>
+                  <span>{{ point.altitude.toFixed(1) }} KM</span>
+                </li>
+              </ul>
+            </div>
+            <div class="grid grid-cols-2 gap-4">
+              <button
+                type="button"
+                class="btn-action w-full bg-red-600 hover:bg-red-700"
+                @click="handleClearAltitudeData"
+              >
+                清空数据
+              </button>
+              <button
+                type="button"
+                class="btn-action w-full bg-blue-600 hover:bg-blue-700"
+                @click="handleImportAltitudeData"
+              >
+                重新导入 JSON
+              </button>
+            </div>
+          </div>
+
+          <p v-if="altitudeFileError" class="mt-3 text-sm text-red-400">
+            错误: {{ altitudeFileError }}
+          </p>
+
+          <button
+            type="button"
+            class="btn-action mt-6 w-full bg-gray-600 hover:bg-gray-700"
+            @click="handleCloseAltitudeModal"
+          >
+            关闭
+          </button>
+        </div>
+      </div>
+    </Teleport>
   </LayoutAdapter>
 </template>
 
 <style scoped>
 /* 样式保持不变 */
 .input-field {
-  @apply block rounded-md border border-gray-300 px-3 py-2 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm dark:border-gray-600 dark:bg-gray-800 dark:text-white dark:focus:border-indigo-400 dark:focus:ring-offset-gray-900;
+  --at-apply: 'block rounded-md border border-gray-600 px-3 py-2 shadow-sm sm:text-sm bg-gray-800 text-white focus:border-indigo-400 focus:ring-offset-gray-900';
 }
 
 .btn-action {
-  @apply rounded-md border border-transparent px-4 py-2 text-base font-medium text-white shadow-sm focus:ring-2 focus:ring-offset-2;
+  --at-apply: 'rounded-md border border-transparent px-4 py-2 text-base font-medium text-white shadow-sm focus:ring-2 focus:ring-offset-2 focus:outline-none';
 }
 
 .btn-action:disabled {
-  @apply cursor-not-allowed bg-gray-300 dark:bg-gray-700;
+  --at-apply: 'cursor-not-allowed bg-gray-700 opacity-70';
 }
 
 .node_list_scrollbar::-webkit-scrollbar {
-  width: 8px; /* 稍微加宽一点以便观察和操作 */
+  width: 8px;
   -webkit-appearance: none;
 }
 
 .node_list_scrollbar::-webkit-scrollbar-thumb {
   border-radius: 4px;
-  background-color: rgb(107 114 128 / 50%); /* 更改为更可见的颜色 */
+  background-color: rgb(107 114 128 / 50%);
   -webkit-box-shadow: 0 0 1px rgb(255 255 255 / 50%);
 }
 .node_list_scrollbar::-webkit-scrollbar-track {
-  background: rgb(31 41 55 / 50%); /* 暗色背景的轨道 */
+  background: rgb(31 41 55 / 50%);
   border-radius: 4px;
 }
 </style>
