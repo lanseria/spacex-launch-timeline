@@ -66,7 +66,7 @@ const controlButtonText = computed(() => {
         跳转
       </button>
     </div>
-    <small class="mt-1 block text-xs text-gray-500">
+    <small class="mt-1 block text-xs text-gray-200">
       输入秒数 (负数T-, 正数T+)，回车或点击跳转。
     </small>
 
@@ -82,7 +82,7 @@ const controlButtonText = computed(() => {
       aria-label="发射倒计时秒数 (正数)"
       :disabled="isStarted"
     >
-    <small class="mb-4 block text-xs text-gray-500">
+    <small class="mb-4 block text-xs text-gray-200">
       从T减多少秒开始倒计时。例如60代表 T-60秒。
     </small>
     <h2 class="mb-2 text-lg font-semibold">
@@ -95,27 +95,8 @@ const controlButtonText = computed(() => {
       class="input-field w-full bg-gray-700 text-white"
       aria-label="时间轴总时长 (秒)"
     >
-    <small class="text-xs text-gray-400 text-gray-500">
+    <small class="text-xs text-gray-200">
       定义圆周代表的总秒数。例3600秒, T-0在中心。
     </small>
-
-    <!-- Author Signature (可以保留在这里，或移到 index.vue 的外部) -->
-    <div class="absolute bottom-4 right-4 z-50 text-right text-xs text-gray-400/75 font-sans">
-      <p class="text-red-500">
-        点击下面时间轴隐藏控制面板
-      </p>
-      <p>作者: 爱吃包子的超</p>
-      <p>
-        B站主页:
-        <a
-          href="https://space.bilibili.com/8487409"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="underline hover:text-gray-200"
-        >
-          B站主页
-        </a>
-      </p>
-    </div>
   </div>
 </template>

@@ -1,8 +1,5 @@
 <script setup lang="ts">
 // pages/index.vue
-// import { type AltitudePoint, type SpeedPoint } from '~/composables/useSpaceTimeline' // 类型现在在子组件或 composable 中处理
-
-// 从 useSpaceTimeline 获取核心状态和方法
 const {
   missionName, // 仍然在 index.vue 中用于底部显示
   vehicleName, // 仍然在 index.vue 中用于顶部显示
@@ -19,10 +16,7 @@ const {
   // altitudeProfile 和 speedProfile 会被传递给 Modal 作为 prop
   altitudeProfile,
   speedProfile,
-  maxQTitle,
-  maxQLine1,
-  maxQLine2,
-  maxQLine3,
+  dynamicTextEntries,
 } = useSpaceTimeline()
 
 const panelRef = useTemplateRef<HTMLElement>('panelRef')
@@ -31,6 +25,8 @@ const showAltitudeModal = ref(false)
 const altitudeFileError = ref<string | null>(null)
 const showSpeedModal = ref(false)
 const speedFileError = ref<string | null>(null)
+const showDynamicTextModal = ref(false) // 新增 Modal 状态
+const dynamicTextFileError = ref<string | null>(null) // 新增文件错误 ref
 
 // 文件对话框逻辑 (保持在 index.vue 因为它们触发 composable 中的方法)
 // 高度
@@ -68,7 +64,23 @@ watch(selectedSpeedFiles, async (newFiles) => {
     finally { resetSpeedFileDialog() }
   }
 })
-
+// 动态文本文件对话框 (新增)
+const { files: selectedDynamicTextFiles, open: openDynamicTextFileDialog, reset: resetDynamicTextFileDialog } = useFileDialog({
+  accept: '.json',
+  multiple: false,
+})
+watch(selectedDynamicTextFiles, async (newFiles) => {
+  const file = newFiles?.[0]
+  if (file) {
+    dynamicTextFileError.value = null
+    try {
+      const { loadDynamicTextProfile: loadTexts } = useSpaceTimeline()
+      await loadTexts(file)
+    }
+    catch (error: any) { dynamicTextFileError.value = error.message || '加载或解析动态文本数据文件失败。' }
+    finally { resetDynamicTextFileDialog() }
+  }
+})
 // --- Modal 事件处理 ---
 // 高度 Modal
 function handleOpenAltitudeModal() { showAltitudeModal.value = true }
@@ -132,9 +144,47 @@ function handleClearSpeedRequest() {
   speedFileError.value = null
 }
 
+// 动态文本 Modal 事件处理 (新增)
+function handleOpenDynamicTextModal() { showDynamicTextModal.value = true }
+function handleCloseDynamicTextModal() {
+  showDynamicTextModal.value = false
+  dynamicTextFileError.value = null
+}
+function handleImportDynamicTextRequest() {
+  dynamicTextFileError.value = null
+  openDynamicTextFileDialog()
+}
+async function handleLoadSampleDynamicTextRequest() {
+  dynamicTextFileError.value = null
+  try {
+    const { dynamicTextEntries: textEntriesRef } = useSpaceTimeline()
+    const response = await fetch('/assets/data/dynamic_text_profile.json') // 对应新的 JSON 文件
+    if (!response.ok)
+      throw new Error(`无法加载示例数据: ${response.statusText}`)
+    const sampleData = await response.json()
+    // 确保校验与 DynamicTextEntry 接口匹配
+    if (Array.isArray(sampleData) && sampleData.every(p =>
+      typeof p.time === 'number'
+      && typeof p.title === 'string'
+      && Array.isArray(p.descriptions) && p.descriptions.every((d: any) => typeof d === 'string')
+      && typeof p.duration === 'number',
+    )) {
+      textEntriesRef.value = sampleData
+    }
+    else { throw new Error('示例动态文本数据格式无效。') }
+  }
+  catch (error: any) { dynamicTextFileError.value = error.message || '加载示例动态文本数据失败。' }
+}
+function handleClearDynamicTextRequest() {
+  const { clearDynamicTextProfile: clearTexts } = useSpaceTimeline()
+  clearTexts()
+  dynamicTextFileError.value = null
+}
+
 onUnmounted(() => {
   resetAltitudeFileDialog()
   resetSpeedFileDialog()
+  resetDynamicTextFileDialog()
 })
 </script>
 
@@ -153,7 +203,7 @@ onUnmounted(() => {
 
       <!-- 控制面板容器 -->
       <div v-show="showPanel" ref="panelRef" class="relative z-20 grid grid-cols-3 mx-auto my-8 w-1200px justify-center gap-4">
-        <PanelCardEventsMaxQ />
+        <PanelCardEventsMaxQ @open-dynamic-text-modal="handleOpenDynamicTextModal" />
         <PanelCardControlsTimeline />
         <PanelCardMissionData
           @open-altitude-modal="handleOpenAltitudeModal"
@@ -205,17 +255,7 @@ onUnmounted(() => {
 
       <!-- 右侧 MAX-Q 显示 (从 useSpaceTimeline 获取数据) -->
       <TrapezoidGradient class="absolute bottom-0 right-0 z-1" horizontal-flip />
-      <!-- <RightPanelMaxQInfo /> -->
-      <!-- 假设你也将这部分拆分，或者直接使用下面的HTML -->
-
-      <div class="absolute bottom-0 right-0 z-1 h-180px w-550px flex flex-col justify-center pr-40px text-right font-saira">
-        <div class="text-30px font-600">
-          {{ maxQTitle }}
-        </div>
-        <div>{{ maxQLine1 }}</div>
-        <div>{{ maxQLine2 }}</div>
-        <div>{{ maxQLine3 }}</div>
-      </div>
+      <RightPanelMaxQInfo />
     </div>
 
     <AltitudeConfigModal
@@ -236,6 +276,17 @@ onUnmounted(() => {
       @import-data="handleImportSpeedRequest"
       @load-sample-data="handleLoadSampleSpeedRequest"
       @clear-data="handleClearSpeedRequest"
+    />
+
+    <!-- 新增动态文本配置 Modal -->
+    <DynamicTextConfigModal
+      :show-modal="showDynamicTextModal"
+      :text-entries="dynamicTextEntries"
+      :error="dynamicTextFileError"
+      @close="handleCloseDynamicTextModal"
+      @import-data="handleImportDynamicTextRequest"
+      @load-sample-data="handleLoadSampleDynamicTextRequest"
+      @clear-data="handleClearDynamicTextRequest"
     />
   </LayoutAdapter>
 </template>

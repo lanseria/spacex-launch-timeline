@@ -8,6 +8,13 @@ export interface SpeedPoint { // 新增
   speed: number // 单位: KM/H
 }
 
+export interface DynamicTextEntry { // 新增
+  time: number // 单位: 秒, 相对于 T-0, 文本开始显示的时间
+  title: string
+  descriptions: string[] // 多行描述
+  duration: number // 单位: 秒, 文本持续显示的时长
+}
+
 // 默认配置数据
 const defaultConfig = {
   missionName: 'Starlink',
@@ -15,10 +22,10 @@ const defaultConfig = {
   speed: 7501, // 这是手动输入的默认速度
   altitude: 64, // 这是手动输入的默认高度
   backgroundImageUrl: '/assets/images/falcon9_16_9.jpg',
-  maxQTitle: 'MAX-Q',
-  maxQLine1: 'MAXIMUM DYNAMIC PRESSURE',
-  maxQLine2: 'THIS IS THE LARGEST AMOUNT OF STRESS',
-  maxQLine3: 'EXERTED ON THE VEHICLE',
+  defaultMaxQTitle: 'MAX-Q',
+  defaultMaxQLine1: 'MAXIMUM DYNAMIC PRESSURE',
+  defaultMaxQLine2: 'THIS IS THE LARGEST AMOUNT OF STRESS',
+  defaultMaxQLine3: 'EXERTED ON THE VEHICLE',
   events: [ // 确保 events 也在 defaultConfig 中
     { time: -300, name: 'ENGINE CHILL' },
     { time: -65, name: 'STRONGBACK RETRACT' },
@@ -57,11 +64,6 @@ export function useSpaceTimeline() {
     'spacex_temp_background_image_url', // 更明确的键名
     defaultConfig.backgroundImageUrl,
   )
-
-  const maxQTitle = useLocalStorage<string>('spacex_max_q_title_v1', defaultConfig.maxQTitle)
-  const maxQLine1 = useLocalStorage<string>('spacex_max_q_line1_v1', defaultConfig.maxQLine1)
-  const maxQLine2 = useLocalStorage<string>('spacex_max_q_line2_v1', defaultConfig.maxQLine2)
-  const maxQLine3 = useLocalStorage<string>('spacex_max_q_line3_v1', defaultConfig.maxQLine3)
 
   const showPanel = ref(true)
 
@@ -219,6 +221,107 @@ export function useSpaceTimeline() {
     speedProfile.value = []
   }
   // --- 速度曲线相关结束 ---
+
+  // --- 动态文本配置 ---
+  const dynamicTextEntries = useLocalStorage<DynamicTextEntry[]>('spacex_dynamic_text_profile_v1', [])
+
+  const activeDynamicTextEntry = computed<DynamicTextEntry | null>(() => {
+    // 这个计算属性只负责根据时间查找活动的条目，不关心 dynamicTextEntries 是否为空
+    if (!dynamicTextEntries.value || dynamicTextEntries.value.length === 0) {
+      return null
+    }
+    const now = currentTimeOffset.value
+    return dynamicTextEntries.value.find(entry => now >= entry.time && now < (entry.time + entry.duration)) || null
+  })
+
+  // 是否应该显示动态文本区域 (如果导入了配置但当前时间不匹配，则不显示)
+  const shouldShowDynamicText = computed<boolean>(() => {
+    // 如果有动态文本条目，并且当前时间匹配一个条目
+    if (dynamicTextEntries.value && dynamicTextEntries.value.length > 0) {
+      return activeDynamicTextEntry.value !== null
+    }
+    // 如果没有导入动态文本条目，则总是“准备好”显示默认文本 (如果默认文本存在)
+    // 或者，也可以根据是否有默认文本来决定，这里假设默认文本总是想显示的
+    return true // 或者根据 defaultConfig.defaultMaxQTitle 是否有值等来决定
+  })
+
+  const maxQTitle = computed<string>(() => {
+    if (dynamicTextEntries.value && dynamicTextEntries.value.length > 0) {
+      // 如果导入了动态文本
+      return activeDynamicTextEntry.value?.title || '' // 如果当前时间不匹配，则返回空字符串
+    }
+    // 如果没有导入动态文本，则使用默认值
+    return defaultConfig.defaultMaxQTitle
+  })
+
+  const currentDescriptions = computed<string[]>(() => {
+    if (dynamicTextEntries.value && dynamicTextEntries.value.length > 0) {
+      // 如果导入了动态文本
+      return activeDynamicTextEntry.value?.descriptions || [] // 如果当前时间不匹配，则返回空数组
+    }
+    // 如果没有导入动态文本，则使用默认值
+    return [
+      defaultConfig.defaultMaxQLine1,
+      defaultConfig.defaultMaxQLine2,
+      defaultConfig.defaultMaxQLine3,
+    ].filter(Boolean)
+  })
+
+  // maxQLine1, maxQLine2, maxQLine3 可以基于 currentDescriptions 派生，或者单独计算：
+  const maxQLine1 = computed<string>(() => {
+    if (dynamicTextEntries.value && dynamicTextEntries.value.length > 0) {
+      return activeDynamicTextEntry.value?.descriptions?.[0] || ''
+    }
+    return defaultConfig.defaultMaxQLine1
+  })
+
+  const maxQLine2 = computed<string>(() => {
+    if (dynamicTextEntries.value && dynamicTextEntries.value.length > 0) {
+      return activeDynamicTextEntry.value?.descriptions?.[1] || ''
+    }
+    return defaultConfig.defaultMaxQLine2
+  })
+
+  const maxQLine3 = computed<string>(() => {
+    if (dynamicTextEntries.value && dynamicTextEntries.value.length > 0) {
+      return activeDynamicTextEntry.value?.descriptions?.[2] || ''
+    }
+    return defaultConfig.defaultMaxQLine3
+  })
+
+  async function loadDynamicTextProfile(file: File): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        try {
+          const content = event.target?.result
+          if (typeof content === 'string') {
+            const parsedData = JSON.parse(content)
+            // 基础校验
+            if (Array.isArray(parsedData) && parsedData.every(p =>
+              typeof p.time === 'number'
+              && typeof p.title === 'string'
+              && Array.isArray(p.descriptions) && p.descriptions.every((d: any) => typeof d === 'string')
+              && typeof p.duration === 'number',
+            )) {
+              dynamicTextEntries.value = parsedData as DynamicTextEntry[]
+              resolve()
+            }
+            else { reject(new Error('无效的动态文本数据格式。')) }
+          }
+          else { reject(new Error('无法读取文件内容。')) }
+        }
+        catch (error) { reject(error) }
+      }
+      reader.onerror = reject
+      reader.readAsText(file)
+    })
+  }
+
+  function clearDynamicTextProfile(): void {
+    dynamicTextEntries.value = []
+  }
+  // --- 动态文本配置结束 ---
 
   const isTPlus = computed(() => currentTimeOffset.value >= 0)
   const missionTimeSeconds = computed(() => parseSeconds(missionTimeRaw.value))
@@ -385,20 +488,30 @@ export function useSpaceTimeline() {
     toggleLaunch,
     resetTimer: resetCoreTimer,
     jumpToTime,
+
+    // MAX-Q (现在是动态文本的计算属性)
     maxQTitle,
     maxQLine1,
     maxQLine2,
     maxQLine3,
+    currentDescriptions, // 可以选择性导出这个
+
     manualAltitude,
     altitudeProfile,
     currentAltitude,
     loadAltitudeProfile,
     clearAltitudeProfile,
-    // --- 速度曲线相关导出 ---
+
     manualSpeed,
     speedProfile,
-    currentSpeed, // 这个已经是计算属性了
+    currentSpeed,
     loadSpeedProfile,
     clearSpeedProfile,
+
+    // 动态文本相关导出
+    shouldShowDynamicText,
+    dynamicTextEntries,
+    loadDynamicTextProfile,
+    clearDynamicTextProfile,
   }
 }

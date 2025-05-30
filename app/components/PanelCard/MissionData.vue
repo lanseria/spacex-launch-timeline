@@ -153,5 +153,24 @@ onUnmounted(() => {
         </small>
       </div>
     </div>
+
+    <!-- Author Signature (可以保留在这里，或移到 index.vue 的外部) -->
+    <div class="absolute bottom-4 right-4 z-50 text-right text-xs text-gray-200/75 font-sans">
+      <p>
+        点击下面时间轴隐藏控制面板
+      </p>
+      <p>作者: 爱吃包子的超</p>
+      <p>
+        B站主页:
+        <a
+          href="https://space.bilibili.com/8487409"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="underline hover:text-gray-200"
+        >
+          https://space.bilibili.com/8487409
+        </a>
+      </p>
+    </div>
   </div>
 </template>

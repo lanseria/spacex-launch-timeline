@@ -1,0 +1,29 @@
+[
+  {
+    "time": -15,
+    "title": "FINAL COUNTDOWN",
+    "descriptions": ["PREPARING FOR IGNITION", "ALL SYSTEMS NOMINAL"],
+    "duration": 13
+  },
+  {
+    "time": 70,
+    "title": "MAX-Q",
+    "descriptions": [
+      "MAXIMUM DYNAMIC PRESSURE",
+      "VEHICLE EXPERIENCING PEAK STRESS"
+    ],
+    "duration": 10
+  },
+  {
+    "time": 140,
+    "title": "MECO",
+    "descriptions": ["MAIN ENGINE CUTOFF", "ENTERING COAST PHASE"],
+    "duration": 15
+  },
+  {
+    "time": 480,
+    "title": "ORBITAL INSERTION",
+    "descriptions": ["SECOND ENGINE CUTOFF (SECO)", "TARGET ORBIT ACHIEVED"],
+    "duration": 20
+  }
+]
