@@ -2,19 +2,24 @@ export interface AltitudePoint {
   time: number // 单位: 秒, 相对于 T-0
   altitude: number // 单位: KM, 保留一位小数
 }
+
+export interface SpeedPoint { // 新增
+  time: number // 单位: 秒, 相对于 T-0
+  speed: number // 单位: KM/H
+}
+
 // 默认配置数据
 const defaultConfig = {
   missionName: 'Starlink',
   vehicle: 'Falcon 9 Block 5',
-  speed: 7501,
+  speed: 7501, // 这是手动输入的默认速度
   altitude: 64, // 这是手动输入的默认高度
   backgroundImageUrl: '/assets/images/falcon9_16_9.jpg',
-  videoConfig: {
-    type: 'local',
-    source: '/videos/falcon9_starlink_launch.mp4',
-    startTimeOffset: -13,
-  },
-  events: [
+  maxQTitle: 'MAX-Q',
+  maxQLine1: 'MAXIMUM DYNAMIC PRESSURE',
+  maxQLine2: 'THIS IS THE LARGEST AMOUNT OF STRESS',
+  maxQLine3: 'EXERTED ON THE VEHICLE',
+  events: [ // 确保 events 也在 defaultConfig 中
     { time: -300, name: 'ENGINE CHILL' },
     { time: -65, name: 'STRONGBACK RETRACT' },
     { time: -10, name: 'STARTUP' },
@@ -26,10 +31,6 @@ const defaultConfig = {
     { time: 490, name: 'SECO-1' },
     { time: 530, name: 'LANDING' },
   ],
-  maxQTitle: 'MAX-Q',
-  maxQLine1: 'MAXIMUM DYNAMIC PRESSURE',
-  maxQLine2: 'THIS IS THE LARGEST AMOUNT OF STRESS',
-  maxQLine3: 'EXERTED ON THE VEHICLE',
 }
 
 function parseSeconds(timeValue: string | number): number {
@@ -50,59 +51,53 @@ export function useSpaceTimeline() {
   const firstNegativeEventTime = initialEventTimes.find(t => t < 0)
   const defaultCountdownStartSeconds = firstNegativeEventTime ? Math.abs(firstNegativeEventTime) : 60
 
-  const missionName = useLocalStorage<string>('spacex_mission_name', defaultConfig.missionName)
-  const vehicleName = useLocalStorage<string>('spacex_vehicle_name', defaultConfig.vehicle)
-  const currentSpeed = useLocalStorage<number>('spacex_telemetry_speed', defaultConfig.speed)
-  const backgroundImageUrl = useSessionStorage<string>(
-    'spacex_persisted_background_image_url',
+  const missionName = useLocalStorage<string>('spacex_mission_name_v1', defaultConfig.missionName) // v1 for potential future structure changes
+  const vehicleName = useLocalStorage<string>('spacex_vehicle_name_v1', defaultConfig.vehicle)
+  const backgroundImageUrl = useSessionStorage<string>( // 使用 SessionStorage 使得背景图仅在当前会话保留
+    'spacex_temp_background_image_url', // 更明确的键名
     defaultConfig.backgroundImageUrl,
   )
 
-  const maxQTitle = useLocalStorage<string>('spacex_max_q_title', defaultConfig.maxQTitle)
-  const maxQLine1 = useLocalStorage<string>('spacex_max_q_line1', defaultConfig.maxQLine1)
-  const maxQLine2 = useLocalStorage<string>('spacex_max_q_line2', defaultConfig.maxQLine2)
-  const maxQLine3 = useLocalStorage<string>('spacex_max_q_line3', defaultConfig.maxQLine3)
+  const maxQTitle = useLocalStorage<string>('spacex_max_q_title_v1', defaultConfig.maxQTitle)
+  const maxQLine1 = useLocalStorage<string>('spacex_max_q_line1_v1', defaultConfig.maxQLine1)
+  const maxQLine2 = useLocalStorage<string>('spacex_max_q_line2_v1', defaultConfig.maxQLine2)
+  const maxQLine3 = useLocalStorage<string>('spacex_max_q_line3_v1', defaultConfig.maxQLine3)
 
   const showPanel = ref(true)
 
-  const timestamps = useLocalStorage<number[]>('spacex_timestamps_seconds', initialEventTimes)
-  const nodeNames = useLocalStorage<string[]>('spacex_nodenames_zh', initialEventNames)
+  const timestamps = useLocalStorage<number[]>('spacex_timestamps_seconds_v1', initialEventTimes)
+  const nodeNames = useLocalStorage<string[]>('spacex_nodenames_zh_v1', initialEventNames)
 
   const missionTimeRaw = ref(defaultMissionDurationSeconds)
-  const timeValueRaw = ref(defaultCountdownStartSeconds) // 用于设置倒计时起点
+  const timeValueRaw = ref(defaultCountdownStartSeconds)
 
   const timerClock = ref('T - 00:00:00')
   const isStarted = ref(false)
   const isPaused = ref(false)
-  const currentTimeOffset = ref(0) // 当前时间偏移量 (秒), T-为负, T+为正
+  const currentTimeOffset = ref(0)
   const jumpTargetTimeRaw = ref<string | number>('')
 
   // --- 高度曲线相关 ---
-  const manualAltitude = useLocalStorage<number>('spacex_manual_altitude_km', defaultConfig.altitude)
-  const altitudeProfile = useLocalStorage<AltitudePoint[]>('spacex_altitude_profile_v1', []) // v1用于可能的结构升级
+  const manualAltitude = useLocalStorage<number>('spacex_manual_altitude_km_v1', defaultConfig.altitude)
+  const altitudeProfile = useLocalStorage<AltitudePoint[]>('spacex_altitude_profile_v1', [])
 
   function calculateAltitudeFromProfile(targetTime: number): number {
     if (!altitudeProfile.value || altitudeProfile.value.length === 0)
-      return manualAltitude.value // 没有profile数据，返回手动值
+      return manualAltitude.value
 
-    // 确保数据按时间排序
     const sortedProfile = [...altitudeProfile.value].sort((a, b) => a.time - b.time)
-
     if (sortedProfile.length === 0)
       return manualAltitude.value
     if (sortedProfile.length === 1)
-      return sortedProfile[0]!.altitude // 只有一个点
+      return sortedProfile[0]!.altitude
 
-    // 处理边界情况
     if (targetTime <= sortedProfile[0]!.time)
       return sortedProfile[0]!.altitude
     if (targetTime >= sortedProfile[sortedProfile.length - 1]!.time)
       return sortedProfile[sortedProfile.length - 1]!.altitude
 
-    // 查找插值点
     let prevPoint: AltitudePoint | null = null
     let nextPoint: AltitudePoint | null = null
-
     for (let i = 0; i < sortedProfile.length - 1; i++) {
       if (targetTime >= sortedProfile[i]!.time && targetTime <= sortedProfile[i + 1]!.time) {
         prevPoint = sortedProfile[i]!
@@ -110,26 +105,19 @@ export function useSpaceTimeline() {
         break
       }
     }
-
     if (prevPoint && nextPoint) {
       if (prevPoint.time === nextPoint.time)
-        return prevPoint.altitude // 防止除以零
-
+        return prevPoint.altitude
       const timeRatio = (targetTime - prevPoint.time) / (nextPoint.time - prevPoint.time)
       const interpolatedAltitude = prevPoint.altitude + (nextPoint.altitude - prevPoint.altitude) * timeRatio
-      return Number.parseFloat(interpolatedAltitude.toFixed(1)) // 保留一位小数
+      return Number.parseFloat(interpolatedAltitude.toFixed(1))
     }
-
-    // 如果没有找到合适的插值区间 (理论上不应该发生，因为有边界处理)
-    // 可以返回手动值或最后一个点的值作为回退
-    console.warn(`未能为时间 ${targetTime} 找到插值区间，返回手动高度。`)
     return manualAltitude.value
   }
 
   const currentAltitude = computed<number>(() => {
     if (altitudeProfile.value && altitudeProfile.value.length > 0)
       return calculateAltitudeFromProfile(currentTimeOffset.value)
-
     return manualAltitude.value
   })
 
@@ -141,48 +129,103 @@ export function useSpaceTimeline() {
           const content = event.target?.result
           if (typeof content === 'string') {
             const parsedData = JSON.parse(content)
-            // 基础校验
             if (Array.isArray(parsedData) && parsedData.every(p => typeof p.time === 'number' && typeof p.altitude === 'number')) {
               altitudeProfile.value = parsedData as AltitudePoint[]
-              // eslint-disable-next-line no-console
-              console.log('高度数据加载成功:', altitudeProfile.value)
               resolve()
             }
-            else {
-              console.error('无效的高度数据格式。期望得到 {time: number, altitude: number}[] 格式。')
-              reject(new Error('无效的高度数据格式。'))
-            }
+            else { reject(new Error('无效的高度数据格式。')) }
           }
-          else {
-            reject(new Error('无法读取文件内容。'))
-          }
+          else { reject(new Error('无法读取文件内容。')) }
         }
-        catch (error) {
-          console.error('解析高度数据失败:', error)
-          reject(error)
-        }
+        catch (error) { reject(error) }
       }
-      reader.onerror = (error) => {
-        console.error('读取文件失败:', error)
-        reject(error)
-      }
+      reader.onerror = reject
       reader.readAsText(file)
     })
   }
 
   function clearAltitudeProfile(): void {
     altitudeProfile.value = []
-    // eslint-disable-next-line no-console
-    console.log('高度数据已清空。')
   }
-  // --- 高度曲线相关结束 ---
+
+  // --- 速度曲线相关 --- (新增)
+  const manualSpeed = useLocalStorage<number>('spacex_manual_speed_kmh_v1', defaultConfig.speed)
+  const speedProfile = useLocalStorage<SpeedPoint[]>('spacex_speed_profile_v1', [])
+
+  function calculateSpeedFromProfile(targetTime: number): number {
+    if (!speedProfile.value || speedProfile.value.length === 0)
+      return manualSpeed.value
+
+    const sortedProfile = [...speedProfile.value].sort((a, b) => a.time - b.time)
+    if (sortedProfile.length === 0)
+      return manualSpeed.value
+    if (sortedProfile.length === 1)
+      return sortedProfile[0]!.speed
+
+    if (targetTime <= sortedProfile[0]!.time)
+      return sortedProfile[0]!.speed
+    if (targetTime >= sortedProfile[sortedProfile.length - 1]!.time)
+      return sortedProfile[sortedProfile.length - 1]!.speed
+
+    let prevPoint: SpeedPoint | null = null
+    let nextPoint: SpeedPoint | null = null
+    for (let i = 0; i < sortedProfile.length - 1; i++) {
+      if (targetTime >= sortedProfile[i]!.time && targetTime <= sortedProfile[i + 1]!.time) {
+        prevPoint = sortedProfile[i]!
+        nextPoint = sortedProfile[i + 1]!
+        break
+      }
+    }
+    if (prevPoint && nextPoint) {
+      if (prevPoint.time === nextPoint.time)
+        return prevPoint.speed
+      const timeRatio = (targetTime - prevPoint.time) / (nextPoint.time - prevPoint.time)
+      const interpolatedSpeed = prevPoint.speed + (nextPoint.speed - prevPoint.speed) * timeRatio
+      return Math.round(interpolatedSpeed) // 速度通常为整数
+    }
+    return manualSpeed.value
+  }
+
+  const currentSpeed = computed<number>(() => { // 修改 currentSpeed
+    if (speedProfile.value && speedProfile.value.length > 0)
+      return calculateSpeedFromProfile(currentTimeOffset.value)
+    return manualSpeed.value
+  })
+
+  async function loadSpeedProfile(file: File): Promise<void> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader()
+      reader.onload = (event) => {
+        try {
+          const content = event.target?.result
+          if (typeof content === 'string') {
+            const parsedData = JSON.parse(content)
+            if (Array.isArray(parsedData) && parsedData.every(p => typeof p.time === 'number' && typeof p.speed === 'number')) {
+              speedProfile.value = parsedData as SpeedPoint[]
+              resolve()
+            }
+            else { reject(new Error('无效的速度数据格式。')) }
+          }
+          else { reject(new Error('无法读取文件内容。')) }
+        }
+        catch (error) { reject(error) }
+      }
+      reader.onerror = reject
+      reader.readAsText(file)
+    })
+  }
+
+  function clearSpeedProfile(): void {
+    speedProfile.value = []
+  }
+  // --- 速度曲线相关结束 ---
 
   const isTPlus = computed(() => currentTimeOffset.value >= 0)
   const missionTimeSeconds = computed(() => parseSeconds(missionTimeRaw.value))
   const processedTimestamps = computed(() => timestamps.value)
   const initialCountdownOffset = computed(() => {
     const secs = parseSeconds(timeValueRaw.value)
-    return (Number.isNaN(secs) || secs <= 0) ? 0 : -secs // T-时间为负数
+    return (Number.isNaN(secs) || secs <= 0) ? 0 : -secs
   })
 
   function addNode() {
@@ -200,34 +243,21 @@ export function useSpaceTimeline() {
   }
 
   let timerIntervalId: ReturnType<typeof setInterval> | null = null
-  let targetT0TimestampMs: number | null = null // T=0 时刻的 performance.now() 时间戳
-  let pauseTimeMs: number | null = null // 暂停时记录的 performance.now()
+  let targetT0TimestampMs: number | null = null
+  let pauseTimeMs: number | null = null
 
   function formatTimeForClock(totalSeconds: number): string {
     const absValue = Math.abs(totalSeconds)
     let secondsForFormatting: number
-
-    if (totalSeconds < 0) {
-      // 对于负数，我们希望 -0.1s 显示为 T - 00:00:01 (向上取整到秒)
-      secondsForFormatting = Math.ceil(absValue)
-    }
-    else {
-      // 对于正数，我们希望 +0.9s 显示为 T + 00:00:00 (向下取整到秒)
-      secondsForFormatting = Math.floor(absValue)
-    }
+    if (totalSeconds < 0) { secondsForFormatting = Math.ceil(absValue) }
+    else { secondsForFormatting = Math.floor(absValue) }
 
     const hours = Math.floor(secondsForFormatting / 3600)
     const minutes = Math.floor((secondsForFormatting % 3600) / 60)
     const seconds = secondsForFormatting % 60
-
     const fHours = String(hours).padStart(2, '0')
     const fMinutes = String(minutes).padStart(2, '0')
     const fSeconds = String(seconds).padStart(2, '0')
-
-    // 确保 T-00:00:00 和 T+00:00:00 正确显示符号
-    // 如果 totalSeconds 为 -0.xxxx (即 T-0)，向上取整后 secondsForFormatting 为 0，此时应该显示 T-
-    // 如果 totalSeconds 为 +0.xxxx (即 T+0)，向下取整后 secondsForFormatting 为 0，此时应该显示 T+
-    // 但 totalSeconds 严格为0时，通常是 T+0
     const finalSign = (totalSeconds < 0 || (Object.is(totalSeconds, -0))) ? '-' : '+'
     return `T ${finalSign} ${fHours}:${fMinutes}:${fSeconds}`
   }
@@ -235,11 +265,9 @@ export function useSpaceTimeline() {
   function updateTimer() {
     if (isPaused.value || !targetT0TimestampMs)
       return
-
     const nowMs = performance.now()
     const elapsedMsSinceT0 = nowMs - targetT0TimestampMs
-    currentTimeOffset.value = elapsedMsSinceT0 / 1000 // 直接计算当前时间点，无需max(0,...)
-
+    currentTimeOffset.value = elapsedMsSinceT0 / 1000
     timerClock.value = formatTimeForClock(currentTimeOffset.value)
   }
 
@@ -251,42 +279,35 @@ export function useSpaceTimeline() {
   }
 
   function _startInternalTimer() {
-    _stopInternalTimer() // 先停止任何现有计时器
+    _stopInternalTimer()
     if (!targetT0TimestampMs) {
-      // 这是一个关键的保护，如果 targetT0TimestampMs 未设定，不应该启动
       console.warn('无法启动计时器：未正确设置目标T0时间戳 (targetT0TimestampMs)。')
-      // isStarted.value = false; // 可以考虑是否在此处重置 isStarted，取决于逻辑
       return
     }
-    updateTimer() // 立即执行一次以更新显示
-    timerIntervalId = setInterval(updateTimer, 50) // 推荐使用 requestAnimationFrame 或更精密的计时器
+    updateTimer()
+    timerIntervalId = setInterval(updateTimer, 50)
   }
 
   function toggleLaunch() {
-    if (!isStarted.value) { // --- 从停止状态到开始 ---
+    if (!isStarted.value) {
       isStarted.value = true
       isPaused.value = false
       pauseTimeMs = null
-      // currentTimeOffset.value 此时应为 initialCountdownOffset.value 或 jumpToTime 设定的值
-      // targetT0TimestampMs 是未来的 T=0 时刻
-      // 例如，如果 currentTimeOffset.value = -60 (T-60s)
-      // 则 targetT0TimestampMs = performance.now() + 60000ms
       targetT0TimestampMs = performance.now() - (currentTimeOffset.value * 1000)
       _startInternalTimer()
     }
-    else if (isPaused.value) { // --- 从暂停状态到继续 ---
+    else if (isPaused.value) {
       isPaused.value = false
       if (pauseTimeMs && targetT0TimestampMs) {
-        // 调整 targetT0TimestampMs 以弥补暂停所花费的时间
         const pausedDurationMs = performance.now() - pauseTimeMs
         targetT0TimestampMs += pausedDurationMs
       }
       pauseTimeMs = null
-      _startInternalTimer() // 使用更新后的 targetT0TimestampMs 重新启动
+      _startInternalTimer()
     }
-    else { // --- 从运行状态到暂停 ---
+    else {
       isPaused.value = true
-      pauseTimeMs = performance.now() // 记录暂停的时刻
+      pauseTimeMs = performance.now()
       _stopInternalTimer()
     }
   }
@@ -297,10 +318,9 @@ export function useSpaceTimeline() {
     isPaused.value = false
     targetT0TimestampMs = null
     pauseTimeMs = null
-    // 重置时，currentTimeOffset 应回到初始倒计时起点
     currentTimeOffset.value = initialCountdownOffset.value
     timerClock.value = formatTimeForClock(currentTimeOffset.value)
-    jumpTargetTimeRaw.value = '' // 清空跳转输入
+    jumpTargetTimeRaw.value = ''
   }
 
   function jumpToTime() {
@@ -309,27 +329,18 @@ export function useSpaceTimeline() {
       console.warn('无效的跳转时间')
       return
     }
-
-    // 无论计时器当前状态如何，都更新 currentTimeOffset
     currentTimeOffset.value = targetSeconds
-    timerClock.value = formatTimeForClock(targetSeconds) // 立即更新时钟显示
-
-    // 根据计时器状态调整 targetT0TimestampMs 和计时器行为
-    if (isStarted.value && !isPaused.value) { // 计时器正在运行
-      _stopInternalTimer() // 先停止当前计时
-      targetT0TimestampMs = performance.now() - (targetSeconds * 1000) // 基于新的offset重新计算T0
-      _startInternalTimer() // 以新的T0启动
-    }
-    else if (isStarted.value && isPaused.value) { // 计时器已启动但已暂停
-      // 仅更新 targetT0TimestampMs，计时器保持暂停状态
-      // 当用户点击“继续”时，会使用这个新的 targetT0TimestampMs
+    timerClock.value = formatTimeForClock(targetSeconds)
+    if (isStarted.value && !isPaused.value) {
+      _stopInternalTimer()
       targetT0TimestampMs = performance.now() - (targetSeconds * 1000)
-      // pauseTimeMs 保持不变，因为它记录的是上一次暂停的时刻
+      _startInternalTimer()
     }
-    else { // 计时器未启动
-      // targetT0TimestampMs 不需要设置，因为计时器还未开始
-      // 当用户点击“开始”时，会根据当前的 currentTimeOffset (已被jumpToTime更新) 来计算 targetT0TimestampMs
-      targetT0TimestampMs = null // 确保未启动时不持有旧的 targetT0
+    else if (isStarted.value && isPaused.value) {
+      targetT0TimestampMs = performance.now() - (targetSeconds * 1000)
+    }
+    else {
+      targetT0TimestampMs = null
     }
   }
 
@@ -338,6 +349,7 @@ export function useSpaceTimeline() {
       URL.revokeObjectURL(backgroundImageUrl.value)
     }
     backgroundImageUrl.value = defaultConfig.backgroundImageUrl
+    triggerRef(backgroundImageUrl) // 确保 useSessionStorage 更新能被侦知
   }
 
   onBeforeUnmount(() => {
@@ -347,14 +359,11 @@ export function useSpaceTimeline() {
     }
   })
 
-  // 初始化计时器状态
   resetCoreTimer()
 
   return {
     missionName,
     vehicleName,
-    currentSpeed,
-    // currentAltitude, // 现在是 computed
     backgroundImageUrl,
     showPanel,
     restoreBackgroundImage,
@@ -380,12 +389,16 @@ export function useSpaceTimeline() {
     maxQLine1,
     maxQLine2,
     maxQLine3,
-
-    // --- 高度曲线相关导出 ---
-    manualAltitude, // 手动输入的高度 ref
-    altitudeProfile, // 高度数据点数组 ref
-    currentAltitude, // 计算后的当前高度 (computed)
-    loadAltitudeProfile, // 加载数据的函数
-    clearAltitudeProfile, // 清空数据的函数
+    manualAltitude,
+    altitudeProfile,
+    currentAltitude,
+    loadAltitudeProfile,
+    clearAltitudeProfile,
+    // --- 速度曲线相关导出 ---
+    manualSpeed,
+    speedProfile,
+    currentSpeed, // 这个已经是计算属性了
+    loadSpeedProfile,
+    clearSpeedProfile,
   }
 }

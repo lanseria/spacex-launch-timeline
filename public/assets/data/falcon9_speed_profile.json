@@ -1,0 +1,19 @@
+[
+  { "time": -300, "speed": 0 },
+  { "time": -10, "speed": 0 },
+  { "time": 0, "speed": 0 },
+  { "time": 10, "speed": 150 },
+  { "time": 30, "speed": 700 },
+  { "time": 50, "speed": 1300 },
+  { "time": 72, "speed": 1750 },
+  { "time": 90, "speed": 2500 },
+  { "time": 120, "speed": 4500 },
+  { "time": 145, "speed": 6800 },
+  { "time": 150, "speed": 7200 },
+  { "time": 180, "speed": 9000 },
+  { "time": 240, "speed": 15000 },
+  { "time": 300, "speed": 20000 },
+  { "time": 400, "speed": 25000 },
+  { "time": 490, "speed": 27500 },
+  { "time": 530, "speed": 27600 }
+]
