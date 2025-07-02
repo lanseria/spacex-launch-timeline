@@ -437,9 +437,14 @@ onUnmounted(() => {
 
       <div class="fixed bottom-16px left-1/2 z-50 mx-auto max-w-md text-center font-400 font-saira -translate-x-1/2">
         <div
-          class="text-42px text-white leading-tight tabular-nums"
+          class="flex items-center gap-1 leading-tight tabular-nums"
         >
-          {{ timerClock }}
+          <div class="w-42px flex items-center gap-1 text-32px text-gray font-bold">
+            <div>T</div><div>{{ timerClock.isPositive ? '+' : '-' }}</div>
+          </div>
+          <div class="text-42px text-white">
+            {{ timerClock.timeString }}
+          </div>
         </div>
         <div
           class="text-sm text-gray-400 uppercase"

@@ -114,6 +114,20 @@ function plotNodesOnCircle() {
   // 将主弧线添加到蒙版组，而不是清晰内容组
   maskGroup.appendChild(mainArc)
 
+  // 2.1.1 绘制主时间轴右侧灰色线，表示未来 (现在绘制到蒙版中)
+  const secondArc = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+  const secondArcStartX = currentCircleCenterX + currentCircleRadius * Math.cos(-Math.PI / 2)
+  const secondArcStartY = currentCircleCenterY + currentCircleRadius * Math.sin(-Math.PI / 2)
+  const secondArcEndX = currentCircleCenterX + currentCircleRadius
+  const secondArcEndY = currentCircleCenterY
+  secondArc.setAttribute('d', `M ${secondArcStartX} ${secondArcStartY} A ${currentCircleRadius} ${currentCircleRadius} 0 0 1 ${secondArcEndX} ${secondArcEndY}`)
+  // 在蒙版中，我们用白色笔触来定义可见区域
+  secondArc.setAttribute('stroke', '#666666')
+  secondArc.setAttribute('stroke-width', '2')
+  secondArc.setAttribute('fill', 'none')
+  // 将主弧线添加到蒙版组，而不是清晰内容组
+  maskGroup.appendChild(secondArc)
+
   // 2.2 绘制 "当前时间" 顶部中心标记线
   const markerLine = document.createElementNS('http://www.w3.org/2000/svg', 'line')
   const markLineY = currentCircleCenterY - currentCircleRadius

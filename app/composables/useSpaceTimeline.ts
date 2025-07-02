@@ -66,7 +66,10 @@ export function useSpaceTimeline() {
   const missionTimeRaw = ref(defaultMissionDurationSeconds)
   const timeValueRaw = ref(defaultCountdownStartSeconds) // 用于设置倒计时起点
 
-  const timerClock = ref('T - 00:00:00')
+  const timerClock = ref({
+    isPositive: false,
+    timeString: '00:00:00',
+  })
   const isStarted = ref(false)
   const isPaused = ref(false)
   const currentTimeOffset = ref(0) // 当前时间偏移量 (秒), T-为负, T+为正
@@ -198,7 +201,7 @@ export function useSpaceTimeline() {
   let targetT0TimestampMs: number | null = null // T=0 时刻的 performance.now() 时间戳
   let pauseTimeMs: number | null = null // 暂停时记录的 performance.now()
 
-  function formatTimeForClock(totalSeconds: number): string {
+  function formatTimeForClock(totalSeconds: number): { isPositive: boolean, timeString: string } {
     const absValue = Math.abs(totalSeconds)
     let secondsForFormatting: number
 
@@ -219,12 +222,14 @@ export function useSpaceTimeline() {
     const fMinutes = String(minutes).padStart(2, '0')
     const fSeconds = String(seconds).padStart(2, '0')
 
-    // 确保 T-00:00:00 和 T+00:00:00 正确显示符号
-    // 如果 totalSeconds 为 -0.xxxx (即 T-0)，向上取整后 secondsForFormatting 为 0，此时应该显示 T-
-    // 如果 totalSeconds 为 +0.xxxx (即 T+0)，向下取整后 secondsForFormatting 为 0，此时应该显示 T+
-    // 但 totalSeconds 严格为0时，通常是 T+0
-    const finalSign = (totalSeconds < 0 || (Object.is(totalSeconds, -0))) ? '-' : '+'
-    return `T ${finalSign} ${fHours}:${fMinutes}:${fSeconds}`
+    // Determine if the time is positive or negative
+    // Note: Object.is(-0, -0) is true, so we check for -0 specifically
+    const isPositive = !(totalSeconds < 0 || Object.is(totalSeconds, -0))
+
+    return {
+      isPositive,
+      timeString: `${fHours}:${fMinutes}:${fSeconds}`,
+    }
   }
 
   function updateTimer() {
