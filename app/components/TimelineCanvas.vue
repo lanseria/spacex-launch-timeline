@@ -7,20 +7,20 @@ const props = defineProps<{
   currentTimeOffset?: number // 当前时间偏移量 (秒), 从T-0开始计算。T-60s时为-60, T+10s时为10。
   canvasWidth?: number
   canvasHeight?: number
-  pastNodeDensityFactor?: number // New: Density for past nodes (e.g., 1.0 default, 2.0 for twice as dense)
-  futureNodeDensityFactor?: number // New: Density for future nodes
+  pastNodeDensityFactor?: number
+  futureNodeDensityFactor?: number
 }>()
 
 const canvasEl = useTemplateRef<HTMLCanvasElement>('canvasEl')
 
-const effectiveCanvasWidth = computed(() => props.canvasWidth || 1200)
+const effectiveCanvasWidth = computed(() => props.canvasWidth || 1920)
 const effectiveCanvasHeight = computed(() => props.canvasHeight || 200)
 
-// --- 圆弧几何配置 (与SVG版本相同) ---
+// --- 圆弧几何配置 ---
 const exposedArcAngleDeg = 64
 const exposedArcAngleRad = exposedArcAngleDeg * (Math.PI / 180)
 
-const circleRadius = computed(() => effectiveCanvasWidth.value)
+const circleRadius = computed(() => effectiveCanvasWidth.value / 2)
 
 const distCenterToChord = computed(() => {
   return circleRadius.value * Math.cos(exposedArcAngleRad / 2)
@@ -29,7 +29,7 @@ const distCenterToChord = computed(() => {
 const circleCenterY = computed(() => effectiveCanvasHeight.value + distCenterToChord.value)
 const circleCenterX = computed(() => effectiveCanvasWidth.value / 2)
 
-// Helper function for ease-in-ease-out (与SVG版本相同)
+// Helper function for ease-in-ease-out
 function easeInOutSine(t: number): number {
   const clampedT = Math.max(0, Math.min(1, t))
   return 0.5 * (1 - Math.cos(Math.PI * clampedT))
@@ -122,7 +122,7 @@ function drawOnCanvas() {
   const textOffsetFromNodeEdge = 18
   const lineToTextGap = 7
 
-  // --- Density and Animation Logic (与SVG版本相同) ---
+  // --- Density and Animation Logic ---
   const safePastDensityFactor = Math.max(0.1, props.pastNodeDensityFactor ?? 1.0)
   const safeFutureDensityFactor = Math.max(0.1, props.futureNodeDensityFactor ?? 1.0)
   const animationStartTime = -20
