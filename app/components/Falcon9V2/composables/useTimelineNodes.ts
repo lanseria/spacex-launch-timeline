@@ -4,13 +4,12 @@ import type { ToRefs } from 'vue'
 import { computed } from 'vue'
 import { interpolateColor, parseRgba } from '../utils/color'
 
-// --- 类型定义 ---
+// --- 类型定义 (与之前相同) ---
 interface NodeProps {
   timestamps: number[]
   nodeNames: string[]
   missionDuration: number
   currentTimeOffset?: number
-  // [NEW] 新增平均疏密度
   averageDensityFactor?: number
   pastNodeDensityFactor?: number
   futureNodeDensityFactor?: number
@@ -40,7 +39,7 @@ export interface ProcessedNode {
   }
 }
 
-// --- 颜色和动画常量 ---
+// --- 颜色和动画常量 (与之前相同) ---
 const COLOR_PAST_PRESENT_STR = 'rgba(255, 255, 255, 1)'
 const COLOR_FUTURE_STR = 'rgba(255, 255, 255, 0.3)'
 const COLOR_INNER_DOT_START_STR = 'rgba(255, 255, 255, 0)'
@@ -58,6 +57,7 @@ function easeInOutSine(t: number): number {
   const clampedT = Math.max(0, Math.min(1, t))
   return 0.5 * (1 - Math.cos(Math.PI * clampedT))
 }
+
 // --- Composable 主函数 ---
 export function useTimelineNodes(
   props: ToRefs<NodeProps>,
@@ -67,51 +67,68 @@ export function useTimelineNodes(
     const currentTimelineTime = props.currentTimeOffset?.value ?? 0
     const { circleRadius, circleCenterX, circleCenterY, effectiveSvgHeight } = geometry
 
-    // --- [MODIFIED] 动画参数更新 ---
+    // --- 动画参数 ---
     const animationStartTime = -9
     const animationDuration = 4
-    const animationEndTime = animationStartTime + animationDuration // Will be -5s
+    const animationEndTime = animationStartTime + animationDuration // -5s
 
-    // Color transition config (unchanged)
+    // --- 颜色过渡参数 ---
     const colorTransitionDuration = 1.0
     const transitionStartOffset = colorTransitionDuration / 2
     const transitionEndOffset = -colorTransitionDuration / 2
 
-    // --- [NEW LOGIC] 默认的疏密度常量 ---
-    const avgDensity = props.averageDensityFactor?.value ?? 5 // 新的平均疏密度，默认值为 2.0
-    const pastDensity = props.pastNodeDensityFactor?.value ?? 1
-    const futureDensity = props.futureNodeDensityFactor?.value ?? 2.0
+    // --- 时间缩放因子 ---
+    const avgScale = props.averageDensityFactor?.value ?? 0.5
+    const pastScale = props.pastNodeDensityFactor?.value ?? 2.0
+    const futureScale = props.futureNodeDensityFactor?.value ?? 1.0
 
-    // Map each timestamp to a processed node object
+    // --- 根据当前时间，计算出用于动画的实时缩放因子 ---
+    let animatedPastScale: number
+    let animatedFutureScale: number
+
+    if (currentTimelineTime < animationStartTime) {
+      animatedPastScale = avgScale
+      animatedFutureScale = avgScale
+    }
+    else if (currentTimelineTime >= animationEndTime) {
+      animatedPastScale = pastScale
+      animatedFutureScale = futureScale
+    }
+    else {
+      const linearProgress = (currentTimelineTime - animationStartTime) / animationDuration
+      const easedProgress = easeInOutSine(linearProgress)
+      animatedPastScale = avgScale * (1 - easedProgress) + pastScale * easedProgress
+      animatedFutureScale = avgScale * (1 - easedProgress) + futureScale * easedProgress
+    }
+
+    /**
+     * 核心函数：将真实时间点映射到被拉伸/压缩后的虚拟时间点
+     */
+    function mapTime(time: number): number {
+      if (time <= 0)
+        return time * animatedPastScale
+      else
+        return time * animatedFutureScale
+    }
+
+    // 将每个时间戳映射为处理后的节点对象
     return props.timestamps.value.map((timestamp, i) => {
-      const eventName = props.nodeNames.value[i] || `Event ${i + 1}`
+      // --- 位置计算 ---
+      const mappedTimestamp = mapTime(timestamp)
+      const mappedCurrentTime = mapTime(currentTimelineTime)
+      const virtualTimeRelativeToNow = mappedTimestamp - mappedCurrentTime
+
+      // [FIXED] 核心改动：
+      // 用“虚拟时间差”除以“固定的真实任务时长的一半”，
+      // 这样缩放因子 avgScale 就不会被抵消了。
+      const angularOffset = (virtualTimeRelativeToNow / (props.missionDuration.value / 2)) * (Math.PI / 2)
+      const angleRad = angularOffset - (Math.PI / 2)
+
+      const cx = circleCenterX.value + circleRadius.value * Math.cos(angleRad)
+      const cy = circleCenterY.value + circleRadius.value * Math.sin(angleRad)
+
+      // --- 颜色计算 (逻辑不变，仍然使用真实时间) ---
       const timeRelativeToNow = timestamp - currentTimelineTime
-
-      // --- [NEW LOGIC] 节点疏密度计算 (移入循环内部) ---
-      let applicableDensityFactor: number
-
-      // Phase 1: Static/Average State (before transition starts)
-      if (currentTimelineTime < animationStartTime) {
-        applicableDensityFactor = avgDensity
-      }
-      // Phase 3: Dynamic State (after transition ends)
-      else if (currentTimelineTime >= animationEndTime) {
-        applicableDensityFactor = (timeRelativeToNow <= 0) ? pastDensity : futureDensity
-      }
-      // Phase 2: Transition State (during the animation)
-      else {
-        // Determine the target density for this specific node
-        const targetDensity = (timeRelativeToNow <= 0) ? pastDensity : futureDensity
-
-        // Calculate the animation's eased progress
-        const linearProgress = (currentTimelineTime - animationStartTime) / animationDuration
-        const easedProgress = easeInOutSine(linearProgress)
-
-        // Interpolate from the average density to the node's target density
-        applicableDensityFactor = avgDensity * (1 - easedProgress) + targetDensity * easedProgress
-      }
-
-      // --- Color calculation logic remains the same ---
       let nodeColor: string
       let innerDotColor: string
       const shouldDrawInnerDot = timeRelativeToNow <= transitionStartOffset
@@ -127,13 +144,8 @@ export function useTimelineNodes(
         innerDotColor = (timeRelativeToNow > 0) ? COLOR_INNER_DOT_START_STR : COLOR_PAST_PRESENT_STR
       }
 
-      // --- Position calculation now uses the new per-node density factor ---
-      const angularOffset = (timeRelativeToNow / (props.missionDuration.value / 2)) * Math.PI / applicableDensityFactor
-      const angleRad = angularOffset - (Math.PI / 2)
-      const cx = circleCenterX.value + circleRadius.value * Math.cos(angleRad)
-      const cy = circleCenterY.value + circleRadius.value * Math.sin(angleRad)
-
-      // ... (Rest of the code for text calculation and returning the node object is unchanged) ...
+      // --- 文本计算和返回对象结构 (与之前相同) ---
+      const eventName = props.nodeNames.value[i] || `Event ${i + 1}`
       const isOutsideText = i % 2 === 1
       const textDirection = isOutsideText ? 1 : -1
       const totalTextOffset = NODE_RADIUS + TEXT_OFFSET_FROM_NODE_EDGE
