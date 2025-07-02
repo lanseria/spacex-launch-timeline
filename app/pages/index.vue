@@ -455,7 +455,6 @@ onUnmounted(() => {
         :mission-duration="missionTimeSeconds"
         :current-time-offset="currentTimeOffset"
         :svg-width="1920"
-        :svg-height="200"
         :past-node-density-factor="3"
         :future-node-density-factor="2"
       />

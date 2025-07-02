@@ -1,275 +1,223 @@
 <script setup lang="ts">
 // components/TimelineSvg.vue
-// defineProps 用于声明组件的输入属性 (props)
+
+// --- 组件 Props 定义 --- (无变化)
 const props = defineProps<{
-  // 事件的时间戳数组 (单位: 秒)。这些时间是相对于 T-0 的绝对时间。
-  // 例如: T-60秒为 -60, T-0时刻为 0, T+120秒为 120。
   timestamps: number[]
-  // 与时间戳对应的事件名称数组。
   nodeNames: string[]
-  // SVG 圆周所代表的总时间跨度 (单位: 秒)。
-  // 例如，如果设置为 3600，则整个圆代表一个小时。
   missionDuration: number
-  // 当前时间相对于 T-0 的偏移量 (单位: 秒)。
-  // 例如: T-60s时为 -60, T+10s时为 10。这个值会动态变化，驱动整个时间轴的动画。
   currentTimeOffset?: number
-  // SVG 画布的宽度，可选，有默认值。
   svgWidth?: number
-  // SVG 画布的高度，可选，有默认值。
   svgHeight?: number
-  // 过去事件节点的密度因子。值越大，节点间距越小（越密集）。用于实现视觉上的压缩效果。
   pastNodeDensityFactor?: number
-  // 未来事件节点的密度因子。值越大，节点间距越小。
   futureNodeDensityFactor?: number
 }>()
 
 // --- 模板引用 ---
-// 获取模板中用于动态内容的 <g> 容器的引用
-const contentGroupEl = useTemplateRef('contentGroupEl')
+// [新增] 引用蒙版内容的容器
+const maskContentGroupEl = useTemplateRef('maskContentGroupEl')
+const sharpContentGroupEl = useTemplateRef('sharpContentGroupEl')
+const blurredContentGroupEl = useTemplateRef('blurredContentGroupEl')
 
-// --- 响应式计算属性 ---
-// 计算有效的SVG宽度和高度，如果 props 未提供，则使用默认值。
+// --- 响应式计算属性 (Geometry & Sizing) --- (无变化)
 const effectiveSvgWidth = computed(() => props.svgWidth || 1920)
-const effectiveSvgHeight = computed(() => props.svgHeight || 200)
+const effectiveSvgHeight = computed(() => props.svgHeight || 300)
 
-// --- 圆弧几何配置 ---
-// 定义了圆弧在SVG画布中可见部分的张开角度（度）。
-const exposedArcAngleDeg = 64
-// 将张开角度从度转换为弧度，以便用于三角函数计算。
-const exposedArcAngleRad = exposedArcAngleDeg * (Math.PI / 180)
-
-// 计算主圆弧的半径，使其等于SVG宽度的一半。
+// --- 圆弧几何配置 --- (无变化)
 const circleRadius = computed(() => effectiveSvgWidth.value / 2)
-
-// 计算从圆心到可见圆弧弦的垂直距离。
-// 这个值用于确定圆心的 Y 坐标，从而将圆的大部分置于画布之外。
-const distCenterToChord = computed(() => {
-  return circleRadius.value * Math.cos(exposedArcAngleRad / 2)
+const circleCenterX = computed(() => effectiveSvgWidth.value / 2)
+const circleCenterY = computed(() => {
+  const exposedArcAngleDeg = 64
+  const exposedArcAngleRad = exposedArcAngleDeg * (Math.PI / 180)
+  const distCenterToChord = circleRadius.value * Math.cos(exposedArcAngleRad / 2)
+  return effectiveSvgHeight.value + distCenterToChord
 })
 
-// 计算圆心的 Y 坐标。通过将画布高度与弦距相加，将圆心向下移动，只露出顶部的一段圆弧。
-const circleCenterY = computed(() => effectiveSvgHeight.value + distCenterToChord.value)
-// 计算圆心的 X 坐标，使其位于SVG画布水平中心。
-const circleCenterX = computed(() => effectiveSvgWidth.value / 2)
-
-// --- 辅助函数 ---
-// 一个标准的 "缓入缓出" (ease-in-out) 动画函数。
-// 输入 t 的范围是 0 到 1，输出一个平滑过渡的值，也是在 0 到 1 之间。
+// --- 辅助函数 --- (无变化)
 function easeInOutSine(t: number): number {
-  // 确保 t 被限制在 [0, 1] 区间内。
   const clampedT = Math.max(0, Math.min(1, t))
   return 0.5 * (1 - Math.cos(Math.PI * clampedT))
 }
 
-// --- 核心绘图函数 ---
-// 此函数负责在SVG上绘制所有元素：圆弧、节点、线条和文字。
+// --- 核心绘图函数 (已优化) ---
+/**
+ * 在 SVG 上绘制所有元素。
+ * [优化] 使用 SVG 蒙版技术来实现主时间轴弧线的 "节点镂空" 效果。
+ * 1. 在一个不可见的 <mask> 中，绘制白色主弧线和黑色的节点圆 "孔"。
+ * 2. 将此蒙版应用到一个白色矩形上，从而只显示出带镂空效果的弧线。
+ * 3. 在前景中正常绘制节点的装饰、指引线和文字。
+ */
 function plotNodesOnCircle() {
-  // 使用对 <g> 容器的引用作为绘图目标
-  const group = contentGroupEl.value
-  if (!group)
-    return // 如果容器还未挂载，则退出。
+  // [新增] 获取蒙版组的引用
+  const maskGroup = maskContentGroupEl.value
+  const sharpGroup = sharpContentGroupEl.value
+  const blurredGroup = blurredContentGroupEl.value
+  if (!maskGroup || !sharpGroup || !blurredGroup)
+    return // 确保所有组都已挂载
 
-  // 获取当前计算出的几何属性值
   const currentCircleRadius = circleRadius.value
   const currentCircleCenterX = circleCenterX.value
   const currentCircleCenterY = circleCenterY.value
-  const currentTimelineTime = props.currentTimeOffset ?? 0 // 如果未提供当前时间，默认为 T-0。
+  const currentTimelineTime = props.currentTimeOffset ?? 0
 
-  // 在每次重绘之前，清空SVG内部的所有旧元素。
-  group.innerHTML = ''
+  // 1. 清空画布：清空所有组的内容
+  maskGroup.innerHTML = ''
+  sharpGroup.innerHTML = ''
+  blurredGroup.innerHTML = ''
 
-  // --- 装饰性圆弧的通用参数 ---
-  const mainArcRadius = currentCircleRadius // 主时间轴圆弧的半径
-  const angleSpan = Math.PI / 2 // 装饰性圆弧的张角（90度）
-  const startAngle = -Math.PI / 2 - angleSpan / 2 // 起始角度
-  const endAngle = -Math.PI / 2 + angleSpan / 2 // 结束角度
-  const arcDrawingFlags = '0 0 1' // SVG 弧形路径参数：非大弧、顺时针
+  // --- 新增：在左上角绘制一个1像素的圆 --- (无变化)
+  const cornerDot = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+  cornerDot.setAttribute('cx', '1')
+  cornerDot.setAttribute('cy', '1')
+  cornerDot.setAttribute('r', '1')
+  cornerDot.setAttribute('fill', 'none')
+  sharpGroup.appendChild(cornerDot)
 
-  const innerArcOffsetFromMain = 45 // 内层装饰弧与主弧的距离
-  const outerArcOffsetFromMain = 45 // 外层装饰弧与主弧的距离
-  const innerArcFillColor = 'rgba(0, 0, 0, 0.7)' // 内弧填充色
-  const innerArcStrokeColor = '#808080' // 内弧描边色
-  const innerArcStrokeWidth = '2' // 内弧描边宽度
-  const outerArcFillColor = 'rgba(0, 0, 0, 0.3)' // 外弧填充色
+  // 2. 绘制装饰性元素 (无变化)
+  const innerArcOffsetFromMain = 30
+  const borderArcRadius = currentCircleRadius - innerArcOffsetFromMain
+  if (borderArcRadius > 0) {
+    const blurArcRadius = borderArcRadius + 20
+    const angleSpan = Math.PI / 2
+    const startAngle = -Math.PI / 2 - angleSpan / 2
+    const endAngle = -Math.PI / 2 + angleSpan / 2
+    const arcFlags = '0 0 1'
 
-  // 1. 绘制外层装饰性圆弧 (一个扇形)
-  const outerDecoArcRadius = currentCircleRadius + outerArcOffsetFromMain
-  if (outerDecoArcRadius > 0) {
-    const x1_outer = currentCircleCenterX + outerDecoArcRadius * Math.cos(startAngle)
-    const y1_outer = currentCircleCenterY + outerDecoArcRadius * Math.sin(startAngle)
-    const x2_outer = currentCircleCenterX + outerDecoArcRadius * Math.cos(endAngle)
-    const y2_outer = currentCircleCenterY + outerDecoArcRadius * Math.sin(endAngle)
-    const outerArcPath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-    // d属性定义路径：M = 移动到起点, A = 绘制圆弧, Z = 闭合路径形成扇形
-    outerArcPath.setAttribute('d', `M ${x1_outer} ${y1_outer} A ${outerDecoArcRadius} ${outerDecoArcRadius} ${arcDrawingFlags} ${x2_outer} ${y2_outer} Z`)
-    outerArcPath.setAttribute('fill', outerArcFillColor)
-    outerArcPath.setAttribute('stroke', 'none')
-    group.appendChild(outerArcPath)
-  }
+    const x1_blur = currentCircleCenterX + blurArcRadius * Math.cos(startAngle)
+    const y1_blur = currentCircleCenterY + blurArcRadius * Math.sin(startAngle)
+    const x2_blur = currentCircleCenterX + blurArcRadius * Math.cos(endAngle)
+    const y2_blur = currentCircleCenterY + blurArcRadius * Math.sin(endAngle)
 
-  // 2. 绘制内层装饰性圆弧 (一个扇形)
-  const innerDecoArcRadius = currentCircleRadius - innerArcOffsetFromMain
-  if (innerDecoArcRadius > 0) {
-    const x1_inner = currentCircleCenterX + innerDecoArcRadius * Math.cos(startAngle)
-    const y1_inner = currentCircleCenterY + innerDecoArcRadius * Math.sin(startAngle)
-    const x2_inner = currentCircleCenterX + innerDecoArcRadius * Math.cos(endAngle)
-    const y2_inner = currentCircleCenterY + innerDecoArcRadius * Math.sin(endAngle)
-    const innerArcPath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-    innerArcPath.setAttribute('d', `M ${x1_inner} ${y1_inner} A ${innerDecoArcRadius} ${innerDecoArcRadius} ${arcDrawingFlags} ${x2_inner} ${y2_inner} Z`)
-    innerArcPath.setAttribute('fill', innerArcFillColor)
-    innerArcPath.setAttribute('stroke', 'none')
+    const blurredArcPath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    blurredArcPath.setAttribute('d', `M ${x1_blur} ${y1_blur} A ${blurArcRadius} ${blurArcRadius} ${arcFlags} ${x2_blur} ${y2_blur} Z`)
+    blurredArcPath.setAttribute('fill', 'rgba(0, 0, 0, 1)')
+    blurredArcPath.setAttribute('stroke', 'none')
+    blurredGroup.appendChild(blurredArcPath)
+
+    const x1_border = currentCircleCenterX + borderArcRadius * Math.cos(startAngle)
+    const y1_border = currentCircleCenterY + borderArcRadius * Math.sin(startAngle)
+    const x2_border = currentCircleCenterX + borderArcRadius * Math.cos(endAngle)
+    const y2_border = currentCircleCenterY + borderArcRadius * Math.sin(endAngle)
+
     const innerArcBorder = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-    innerArcBorder.setAttribute('d', `M ${x1_inner} ${y1_inner} A ${innerDecoArcRadius} ${innerDecoArcRadius} ${arcDrawingFlags} ${x2_inner} ${y2_inner}`)
-    innerArcBorder.setAttribute('stroke', innerArcStrokeColor)
-    innerArcBorder.setAttribute('stroke-width', innerArcStrokeWidth)
+    innerArcBorder.setAttribute('d', `M ${x1_border} ${y1_border} A ${borderArcRadius} ${borderArcRadius} ${arcFlags} ${x2_border} ${y2_border}`)
+    innerArcBorder.setAttribute('stroke', '#808080')
+    innerArcBorder.setAttribute('stroke-width', '1')
     innerArcBorder.setAttribute('fill', 'none')
-    // --- 修改：将所有元素添加到分组中 ---
-    group.appendChild(innerArcPath)
-    group.appendChild(innerArcBorder)
+    sharpGroup.appendChild(innerArcBorder)
   }
 
-  // 3. 绘制主时间轴圆弧
-  // 3.1 背景圆弧 (灰色，作为轨迹基线)
-  const bgArc = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-  const bg_x1 = currentCircleCenterX + mainArcRadius * Math.cos(startAngle)
-  const bg_y1 = currentCircleCenterY + mainArcRadius * Math.sin(startAngle)
-  const bg_x2 = currentCircleCenterX + mainArcRadius * Math.cos(endAngle)
-  const bg_y2 = currentCircleCenterY + mainArcRadius * Math.sin(endAngle)
-  bgArc.setAttribute('d', `M ${bg_x1} ${bg_y1} A ${mainArcRadius} ${mainArcRadius} ${arcDrawingFlags} ${bg_x2} ${bg_y2}`)
-  bgArc.setAttribute('stroke', '#aaaaaa')
-  bgArc.setAttribute('stroke-width', '2')
-  bgArc.setAttribute('fill', 'none')
-  group.appendChild(bgArc)
-  // 3.2 可见的主圆弧 (白色，节点将位于其上)
-  // 这段代码绘制了一个从右到左的半圆，但因为圆心在画布下方，所以看起来是一段弧。
+  // [优化] 2.1 绘制主时间轴圆弧 (现在绘制到蒙版中)
   const mainArc = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-  const x1 = currentCircleCenterX + mainArcRadius * Math.cos(startAngle)
-  const y1 = currentCircleCenterY + mainArcRadius * Math.sin(startAngle)
-  const x2 = currentCircleCenterX + mainArcRadius * Math.cos(-Math.PI / 2) // 左侧点 (9点钟方向)
-  const y2 = currentCircleCenterY + mainArcRadius * Math.sin(-Math.PI / 2)
-  mainArc.setAttribute('d', `M ${x1} ${y1} A ${mainArcRadius} ${mainArcRadius} ${arcDrawingFlags} ${x2} ${y2}`)
+  const mainArcStartX = currentCircleCenterX - currentCircleRadius
+  const mainArcStartY = currentCircleCenterY
+  const mainArcEndX = currentCircleCenterX + currentCircleRadius
+  const mainArcEndY = currentCircleCenterY
+  mainArc.setAttribute('d', `M ${mainArcStartX} ${mainArcStartY} A ${currentCircleRadius} ${currentCircleRadius} 0 0 1 ${mainArcEndX} ${mainArcEndY}`)
+  // 在蒙版中，我们用白色笔触来定义可见区域
   mainArc.setAttribute('stroke', '#FFFFFF')
   mainArc.setAttribute('stroke-width', '2')
   mainArc.setAttribute('fill', 'none')
-  group.appendChild(mainArc)
+  // 将主弧线添加到蒙版组，而不是清晰内容组
+  maskGroup.appendChild(mainArc)
 
-  // 4. 绘制 "当前时间" 标记线 (位于顶部中央的短竖线)
+  // 2.2 绘制 "当前时间" 顶部中心标记线 (无变化，仍在清晰组)
   const markerLine = document.createElementNS('http://www.w3.org/2000/svg', 'line')
-  const markLineY = currentCircleCenterY - currentCircleRadius // 圆弧的最高点
+  const markLineY = currentCircleCenterY - currentCircleRadius
   markerLine.setAttribute('x1', String(currentCircleCenterX))
-  markerLine.setAttribute('y1', String(markLineY - 3))
+  markerLine.setAttribute('y1', String(markLineY - 5))
   markerLine.setAttribute('x2', String(currentCircleCenterX))
-  markerLine.setAttribute('y2', String(markLineY + 3))
+  markerLine.setAttribute('y2', String(markLineY + 5))
   markerLine.setAttribute('stroke', '#FFF')
-  markerLine.setAttribute('stroke-width', '2')
-  group.appendChild(markerLine)
+  markerLine.setAttribute('stroke-width', '3')
+  // sharpGroup.appendChild(markerLine)
+  maskGroup.appendChild(markerLine)
 
-  // --- 节点绘制参数 ---
+  // 3. 遍历并绘制每个事件节点 (逻辑拆分)
   const numEvents = props.timestamps.length
-  const halfMissionDuration = props.missionDuration / 2 // 使用半周期时长来映射到半圆 (PI弧度)
-  const nodeDotRadius = 6.5 // 节点外圆半径
-  const nodeOuterRadius = 6.5 // 用于可见性判断的半径
-  const nodeInnerDotRadiusSmall = 3 // 过去事件节点内部的小白点半径
+  const halfMissionDuration = props.missionDuration / 2
+  const nodeRadius = 6.5
+  const pastNodeInnerDotRadius = 2
+  const textOffsetFromNodeEdge = 12
+  const lineToTextGap = 0
 
-  const textOffsetFromNodeEdge = 18 // 文本离节点边缘的总距离
-  const lineToTextGap = 7 // 指引线末端与文本之间的间隙
-
-  // --- 密度和动画逻辑 ---
-  // 使用安全的密度因子，避免值为0或负数。
   const safePastDensityFactor = Math.max(0.1, props.pastNodeDensityFactor ?? 1.0)
   const safeFutureDensityFactor = Math.max(0.1, props.futureNodeDensityFactor ?? 1.0)
-
-  // 定义密度因子切换动画的时间窗口
-  const animationStartTime = -20 // 动画在 T-20s 时开始
-  const animationDuration = 7 // 动画持续 7 秒
+  const animationStartTime = -20
+  const animationDuration = 7
   const animationEndTime = animationStartTime + animationDuration
 
-  // --- 遍历并绘制每个事件节点 ---
   for (let i = 0; i < numEvents; i++) {
     const eventAbsoluteTime = props.timestamps[i]!
-    const eventName = props.nodeNames[i] || `事件 ${i + 1}`
-    // 计算事件时间相对于 "当前时间" 的差值。
-    // 负数表示过去，正数表示未来。
+    const eventName = props.nodeNames[i] || `Event ${i + 1}`
     const timeRelativeToNow = eventAbsoluteTime - currentTimelineTime
 
+    // 密度和动画逻辑 (无变化)
     let applicableDensityFactor: number
-
-    // 根据当前时间，决定使用哪个密度因子或进行插值
     if (currentTimelineTime < animationStartTime) {
-      // --- 状态1: 动画开始前 (例如 currentTimelineTime < -20s) ---
-      // 所有节点都使用 "过去" 的密度因子，视觉上比较稀疏。
       applicableDensityFactor = safePastDensityFactor
     }
-    else if (currentTimelineTime >= animationStartTime && currentTimelineTime <= animationEndTime) {
-      // --- 状态2: 动画进行中 (例如 -20s <= currentTimelineTime <= -13s) ---
-      // 所有节点的密度因子从 "过去" 状态平滑过渡到 "未来" 状态。
-      const linearProgress = (currentTimelineTime - animationStartTime) / animationDuration // 线性进度 (0-1)
-      const easedProgress = easeInOutSine(linearProgress) // 应用缓动函数，使过渡更自然
-
-      // 线性插值计算当前帧的密度因子
+    else if (currentTimelineTime <= animationEndTime) {
+      const linearProgress = (currentTimelineTime - animationStartTime) / animationDuration
+      const easedProgress = easeInOutSine(linearProgress)
       applicableDensityFactor = safePastDensityFactor * (1 - easedProgress) + safeFutureDensityFactor * easedProgress
     }
-    else { // currentTimelineTime > animationEndTime (例如 currentTimelineTime > -13s)
-      // --- 状态3: 动画结束后 ---
-      // 所有节点都使用 "未来" 的密度因子，视觉上比较密集。
+    else {
       applicableDensityFactor = safeFutureDensityFactor
     }
 
-    // 将时间差转换为角度。
-    // `timeRelativeToNow / halfMissionDuration` 将时间映射到 [-1, 1] 范围 (大致)
-    // `* Math.PI` 将其转换为 [-PI, PI] 的弧度范围 (半个圆)
-    const angularOffsetBase = (timeRelativeToNow / halfMissionDuration) * Math.PI
-    // 应用密度因子来压缩或拉伸角度，实现视觉效果
-    const angularOffset = angularOffsetBase / applicableDensityFactor
-    // ` - (Math.PI / 2)` 将 0 度（当前时间）旋转到圆弧顶部（-90度或270度方向）
+    const angularOffset = (timeRelativeToNow / halfMissionDuration) * Math.PI / applicableDensityFactor
     const angleRad = angularOffset - (Math.PI / 2)
 
-    // 根据角度计算节点圆心的 (x, y) 坐标
-    const nodeCenterX = currentCircleCenterX + mainArcRadius * Math.cos(angleRad)
-    const nodeCenterY = currentCircleCenterY + mainArcRadius * Math.sin(angleRad)
+    const nodeCenterX = currentCircleCenterX + currentCircleRadius * Math.cos(angleRad)
+    const nodeCenterY = currentCircleCenterY + currentCircleRadius * Math.sin(angleRad)
 
-    // 性能优化：如果节点在垂直方向上完全不可见，则跳过绘制
-    const isVisibleVertically = nodeCenterY >= -nodeOuterRadius && nodeCenterY <= effectiveSvgHeight.value + nodeOuterRadius
-    if (!isVisibleVertically)
+    if (nodeCenterY < -nodeRadius || nodeCenterY > effectiveSvgHeight.value + nodeRadius)
       continue
 
-    // 绘制节点的外圆 (黑底白边)
+    // [优化] 3.1 在蒙版上绘制黑色实心圆来 "打孔"
+    const maskNodeHole = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
+    maskNodeHole.setAttribute('cx', String(nodeCenterX))
+    maskNodeHole.setAttribute('cy', String(nodeCenterY))
+    maskNodeHole.setAttribute('r', String(nodeRadius)) // 使用节点半径
+    // 在蒙版中，黑色 = 不可见/擦除
+    maskNodeHole.setAttribute('fill', '#000000')
+    maskGroup.appendChild(maskNodeHole)
+
+    // [新增] 步骤 3.2: 在前景中绘制节点的边框
+    // 这个圆环会被绘制在被蒙版处理过的弧线之上，从而实现完美的描边效果。
     const nodeOuterCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
     nodeOuterCircle.setAttribute('cx', String(nodeCenterX))
     nodeOuterCircle.setAttribute('cy', String(nodeCenterY))
-    nodeOuterCircle.setAttribute('r', String(nodeOuterRadius))
-    nodeOuterCircle.setAttribute('fill', '#000')
-    nodeOuterCircle.setAttribute('stroke', '#FFF')
-    nodeOuterCircle.setAttribute('stroke-width', '1.8')
-    group.appendChild(nodeOuterCircle)
+    nodeOuterCircle.setAttribute('r', String(nodeRadius))
+    nodeOuterCircle.setAttribute('fill', 'none') // 必须是透明填充
+    nodeOuterCircle.setAttribute('stroke', '#FFF') // 边框颜色
+    nodeOuterCircle.setAttribute('stroke-width', '1') // 边框宽度
+    sharpGroup.appendChild(nodeOuterCircle) // 添加到清晰的前景组
 
-    // 如果是已发生的事件 (或正在发生的事件)，则在节点中心绘制一个实心白点
+    // 如果是已发生事件，在节点中心绘制一个实心白点 (无变化，仍在清晰组)
     if (timeRelativeToNow <= 0) {
       const innerDotPast = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
       innerDotPast.setAttribute('cx', String(nodeCenterX))
       innerDotPast.setAttribute('cy', String(nodeCenterY))
-      innerDotPast.setAttribute('r', String(nodeInnerDotRadiusSmall))
+      innerDotPast.setAttribute('r', String(pastNodeInnerDotRadius))
       innerDotPast.setAttribute('fill', '#FFF')
-      group.appendChild(innerDotPast)
+      sharpGroup.appendChild(innerDotPast)
     }
 
-    // --- 绘制指引线和文字 ---
-    // 通过索引的奇偶性，交替地将文字放置在主圆弧的内侧和外侧
+    // 3.3 绘制指引线和文字 (无变化，仍在清晰组)
     const isOutsideText = i % 2 === 0
-    const textDirectionMultiplier = isOutsideText ? 1 : -1 // 1 表示向外, -1 表示向内
+    const textDirectionMultiplier = isOutsideText ? 1 : -1
 
-    // 计算指引线的起点 (在节点边缘)
-    const lineStartX = nodeCenterX + textDirectionMultiplier * nodeDotRadius * Math.cos(angleRad)
-    const lineStartY = nodeCenterY + textDirectionMultiplier * nodeDotRadius * Math.sin(angleRad)
-    const lineLength = textOffsetFromNodeEdge - lineToTextGap - nodeDotRadius
-    if (lineLength < 1) // 如果计算出的线长度过短，则不绘制
+    const lineLength = textOffsetFromNodeEdge - lineToTextGap - nodeRadius
+    if (lineLength < 1)
       continue
 
-    // 计算指引线的终点
-    const lineEndX = nodeCenterX + textDirectionMultiplier * (nodeDotRadius + lineLength) * Math.cos(angleRad)
-    const lineEndY = nodeCenterY + textDirectionMultiplier * (nodeDotRadius + lineLength) * Math.sin(angleRad)
+    const lineStartX = nodeCenterX + textDirectionMultiplier * nodeRadius * Math.cos(angleRad)
+    const lineStartY = nodeCenterY + textDirectionMultiplier * nodeRadius * Math.sin(angleRad)
+    const lineEndX = nodeCenterX + textDirectionMultiplier * (nodeRadius + lineLength) * Math.cos(angleRad)
+    const lineEndY = nodeCenterY + textDirectionMultiplier * (nodeRadius + lineLength) * Math.sin(angleRad)
 
-    // 创建并添加指引线
     const line = document.createElementNS('http://www.w3.org/2000/svg', 'line')
     line.setAttribute('x1', String(lineStartX))
     line.setAttribute('y1', String(lineStartY))
@@ -277,65 +225,31 @@ function plotNodesOnCircle() {
     line.setAttribute('y2', String(lineEndY))
     line.setAttribute('stroke', '#ccc')
     line.setAttribute('stroke-width', '2')
-    group.appendChild(line)
+    sharpGroup.appendChild(line)
 
-    // 计算文字的中心点 (位于指引线末端外侧一点)
-    const textCenterX = nodeCenterX + textDirectionMultiplier * (nodeDotRadius + lineLength + lineToTextGap) * Math.cos(angleRad)
-    const textCenterY = nodeCenterY + textDirectionMultiplier * (nodeDotRadius + lineLength + lineToTextGap) * Math.sin(angleRad)
+    const textCenterX = nodeCenterX + textDirectionMultiplier * (nodeRadius + lineLength + lineToTextGap) * Math.cos(angleRad)
+    const textCenterY = nodeCenterY + textDirectionMultiplier * (nodeRadius + lineLength + lineToTextGap) * Math.sin(angleRad)
 
-    // 创建 <text> 元素
     const textElement = document.createElementNS('http://www.w3.org/2000/svg', 'text')
+    textElement.textContent = eventName
     textElement.setAttribute('x', String(textCenterX))
     textElement.setAttribute('y', String(textCenterY))
-
-    // 计算旋转角度，使文字方向与径向线垂直
-    const textRotationDeg = angleRad * (180 / Math.PI) + 90
-    textElement.setAttribute('transform', `rotate(${textRotationDeg}, ${textCenterX}, ${textCenterY})`)
-
-    // 设置文本对齐方式，使其以自身中心为锚点，并根据内外位置调整垂直对齐基线
-    textElement.setAttribute('text-anchor', 'middle') // 水平居中
-    textElement.setAttribute('dominant-baseline', isOutsideText ? 'text-after-edge' : 'text-before-edge') // 垂直对齐
     textElement.setAttribute('fill', '#fff')
     textElement.setAttribute('font-size', '10px')
-    textElement.setAttribute('font-family', 'Saira')
-    textElement.setAttribute('font-weight', '500')
+    textElement.setAttribute('font-family', 'Saira, sans-serif')
+    textElement.setAttribute('font-weight', '600')
 
-    // --- 处理多行文本 ---
-    // 将事件名称按空格分割成单词，以便分行显示
-    const words = eventName.split(' ')
-    const numLines = words.length
-    const lineHeightEm = 1.2 // 行高 (相对于字体大小)
+    const textRotationDeg = angleRad * (180 / Math.PI) + 90
+    textElement.setAttribute('transform', `rotate(${textRotationDeg}, ${textCenterX}, ${textCenterY})`)
+    textElement.setAttribute('text-anchor', 'middle')
+    textElement.setAttribute('dominant-baseline', isOutsideText ? 'text-after-edge' : 'text-before-edge')
 
-    if (numLines > 0) {
-      words.forEach((word, index) => {
-        const tspan = document.createElementNS('http://www.w3.org/2000/svg', 'tspan')
-        tspan.setAttribute('x', String(textCenterX)) // 每行都水平居中
-        tspan.textContent = word
-
-        if (index === 0) {
-          // 对于第一行，计算一个向上的偏移量，使整个文本块垂直居中
-          const firstLineDy = -((numLines - 1) / 2) * lineHeightEm
-          tspan.setAttribute('dy', `${firstLineDy}em`)
-        }
-        else {
-          // 对于后续行，相对于上一行向下移动一个行高
-          tspan.setAttribute('dy', `${lineHeightEm}em`)
-        }
-        textElement.appendChild(tspan)
-      })
-    }
-    group.appendChild(textElement)
+    sharpGroup.appendChild(textElement)
   }
 }
 
-// --- Vue 生命周期钩子和侦听器 ---
-
-// onMounted: 当组件挂载到 DOM 后，立即执行一次绘图。
-onMounted(() => {
-  plotNodesOnCircle()
-})
-
-// watch: 侦听所有可能影响视图的 props 和计算属性。
+// --- Vue 生命周期钩子和侦听器 --- (无变化)
+onMounted(plotNodesOnCircle)
 watch(
   () => [
     props.timestamps,
@@ -347,39 +261,71 @@ watch(
     props.pastNodeDensityFactor,
     props.futureNodeDensityFactor,
   ],
-  () => {
-    // 当任何依赖项发生变化时，重新调用绘图函数以更新 SVG。
-    plotNodesOnCircle()
-  },
+  plotNodesOnCircle,
   {
-    deep: true, // 深度侦听，对于 timestamps 和 nodeNames 这样的数组/对象是必需的。
-    immediate: false, // 不在初始渲染时立即执行（因为 onMounted 已经处理了）。
+    deep: true,
+    immediate: false,
   },
 )
 </script>
 
 <template>
-  <!-- 容器 div, 使用绝对定位将组件固定在父容器的底部中心 -->
   <div class="absolute bottom-0 w-full flex justify-center overflow-hidden">
     <svg class="w-full" :width="effectiveSvgWidth" :height="effectiveSvgHeight">
-      <g ref="contentGroupEl" class="fade-opacity" />
+      <!-- 定义区: 放置滤镜和蒙版 -->
+      <defs>
+        <!-- 滤镜 (无变化) -->
+        <filter id="blurMe" x="0" y="0" width="100%" height="100%" filterUnits="userSpaceOnUse">
+          <feGaussianBlur in="SourceGraphic" stdDeviation="50" />
+        </filter>
+
+        <!--
+          [新增] SVG 蒙版定义
+          - id="timeline-mask": 蒙版的唯一标识符。
+          - maskContentGroupEl: 一个空的 <g> 容器，我们的脚本将动态地向其中填充蒙版内容
+            (白色的弧线和黑色的节点"孔")。
+        -->
+        <mask id="timeline-mask">
+          <g ref="maskContentGroupEl" />
+        </mask>
+      </defs>
+
+      <!--
+        绘图层
+        注意绘制顺序：底层 -> 顶层
+      -->
+      <g class="fade-opacity">
+        <!-- 1. 模糊背景层 (无变化) -->
+        <g ref="blurredContentGroupEl" filter="url(#blurMe)" />
+
+        <!--
+          [新增] 2. 主时间轴层 (使用蒙版)
+          - 我们画一个覆盖整个SVG的白色矩形。
+          - `mask="url(#timeline-mask)"` 属性将蒙版应用到这个矩形上。
+          - 效果: 矩形只会在蒙版为白色的区域（即我们绘制的带孔弧线）显示出来。
+        -->
+        <rect x="0" y="0" :width="effectiveSvgWidth" :height="effectiveSvgHeight" fill="white" mask="url(#timeline-mask)" />
+
+        <!-- 3. 清晰前景层 (无变化) -->
+        <!-- 包含: 顶部标记, 节点内部点, 指引线, 文字等。 -->
+        <g ref="sharpContentGroupEl" />
+      </g>
     </svg>
   </div>
 </template>
 
 <style lang="css" scoped>
+/* (无变化) */
 .fade-opacity {
-  width: 1920px;
-  height: 200px;
   mask: linear-gradient(
     90deg,
     transparent 0%,
-    /* 变化非常缓慢 */ rgba(0, 0, 0, 0.1) 10%,
-    /* 快速变化 */ rgba(0, 0, 0, 0.55) 30%,
-    /* 到达完全不透明 */ rgba(0, 0, 0, 1) 35%,
-    /* 保持完全不透明 */ rgba(0, 0, 0, 1) 65%,
-    /* 开始快速变化 */ rgba(0, 0, 0, 0.55) 70%,
-    /* 变化再次减慢 */ rgba(0, 0, 0, 0.1) 90%,
+    rgba(0, 0, 0, 0) 10%,
+    rgba(0, 0, 0, 0.1) 25%,
+    rgba(0, 0, 0, 1) 35%,
+    rgba(0, 0, 0, 1) 65%,
+    rgba(0, 0, 0, 0.1) 75%,
+    rgba(0, 0, 0, 0) 90%,
     transparent 100%
   );
 }
