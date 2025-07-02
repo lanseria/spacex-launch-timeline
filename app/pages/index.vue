@@ -455,20 +455,7 @@ onUnmounted(() => {
         :mission-duration="missionTimeSeconds"
         :current-time-offset="currentTimeOffset"
         :svg-width="1920"
-        :past-node-density-factor="3"
-        :future-node-density-factor="2"
       />
-      <!-- <TimelineCanvas
-        class="fixed bottom-0 left-1/2 z-30 -translate-x-1/2"
-        :timestamps="processedTimestamps"
-        :node-names="nodeNames"
-        :mission-duration="missionTimeSeconds"
-        :current-time-offset="currentTimeOffset"
-        :canvas-width="1920"
-        :canvas-height="200"
-        :past-node-density-factor="3"
-        :future-node-density-factor="2"
-      /> -->
       <TrapezoidGradient class="absolute bottom-0 left-0 z-1" />
       <div class="absolute bottom-10px left-60px z-30 flex gap-4">
         <Gauge
