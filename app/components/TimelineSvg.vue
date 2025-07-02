@@ -1,7 +1,5 @@
 <script setup lang="ts">
 // components/TimelineSvg.vue
-
-// --- 组件属性定义 ---
 // defineProps 用于声明组件的输入属性 (props)
 const props = defineProps<{
   // 事件的时间戳数组 (单位: 秒)。这些时间是相对于 T-0 的绝对时间。
@@ -26,8 +24,8 @@ const props = defineProps<{
 }>()
 
 // --- 模板引用 ---
-// 使用 useTemplateRef 获取模板中 <svg> 元素的引用，以便直接操作DOM。
-const svgEl = useTemplateRef('svgEl')
+// 获取模板中用于动态内容的 <g> 容器的引用
+const contentGroupEl = useTemplateRef('contentGroupEl')
 
 // --- 响应式计算属性 ---
 // 计算有效的SVG宽度和高度，如果 props 未提供，则使用默认值。
@@ -66,9 +64,10 @@ function easeInOutSine(t: number): number {
 // --- 核心绘图函数 ---
 // 此函数负责在SVG上绘制所有元素：圆弧、节点、线条和文字。
 function plotNodesOnCircle() {
-  const svg = svgEl.value
-  if (!svg)
-    return // 如果SVG元素还未挂载，则退出。
+  // 使用对 <g> 容器的引用作为绘图目标
+  const group = contentGroupEl.value
+  if (!group)
+    return // 如果容器还未挂载，则退出。
 
   // 获取当前计算出的几何属性值
   const currentCircleRadius = circleRadius.value
@@ -77,7 +76,7 @@ function plotNodesOnCircle() {
   const currentTimelineTime = props.currentTimeOffset ?? 0 // 如果未提供当前时间，默认为 T-0。
 
   // 在每次重绘之前，清空SVG内部的所有旧元素。
-  svg.innerHTML = ''
+  group.innerHTML = ''
 
   // --- 装饰性圆弧的通用参数 ---
   const mainArcRadius = currentCircleRadius // 主时间轴圆弧的半径
@@ -105,7 +104,7 @@ function plotNodesOnCircle() {
     outerArcPath.setAttribute('d', `M ${x1_outer} ${y1_outer} A ${outerDecoArcRadius} ${outerDecoArcRadius} ${arcDrawingFlags} ${x2_outer} ${y2_outer} Z`)
     outerArcPath.setAttribute('fill', outerArcFillColor)
     outerArcPath.setAttribute('stroke', 'none')
-    svg.appendChild(outerArcPath)
+    group.appendChild(outerArcPath)
   }
 
   // 2. 绘制内层装饰性圆弧 (一个扇形)
@@ -118,9 +117,15 @@ function plotNodesOnCircle() {
     const innerArcPath = document.createElementNS('http://www.w3.org/2000/svg', 'path')
     innerArcPath.setAttribute('d', `M ${x1_inner} ${y1_inner} A ${innerDecoArcRadius} ${innerDecoArcRadius} ${arcDrawingFlags} ${x2_inner} ${y2_inner} Z`)
     innerArcPath.setAttribute('fill', innerArcFillColor)
-    innerArcPath.setAttribute('stroke', innerArcStrokeColor)
-    innerArcPath.setAttribute('stroke-width', innerArcStrokeWidth)
-    svg.appendChild(innerArcPath)
+    innerArcPath.setAttribute('stroke', 'none')
+    const innerArcBorder = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+    innerArcBorder.setAttribute('d', `M ${x1_inner} ${y1_inner} A ${innerDecoArcRadius} ${innerDecoArcRadius} ${arcDrawingFlags} ${x2_inner} ${y2_inner}`)
+    innerArcBorder.setAttribute('stroke', innerArcStrokeColor)
+    innerArcBorder.setAttribute('stroke-width', innerArcStrokeWidth)
+    innerArcBorder.setAttribute('fill', 'none')
+    // --- 修改：将所有元素添加到分组中 ---
+    group.appendChild(innerArcPath)
+    group.appendChild(innerArcBorder)
   }
 
   // 3. 绘制主时间轴圆弧
@@ -130,23 +135,23 @@ function plotNodesOnCircle() {
   const bg_y1 = currentCircleCenterY + mainArcRadius * Math.sin(startAngle)
   const bg_x2 = currentCircleCenterX + mainArcRadius * Math.cos(endAngle)
   const bg_y2 = currentCircleCenterY + mainArcRadius * Math.sin(endAngle)
-  bgArc.setAttribute('d', `M ${bg_x1} ${bg_y1} A ${mainArcRadius} ${mainArcRadius} 0 0 1 ${bg_x2} ${bg_y2}`)
+  bgArc.setAttribute('d', `M ${bg_x1} ${bg_y1} A ${mainArcRadius} ${mainArcRadius} ${arcDrawingFlags} ${bg_x2} ${bg_y2}`)
   bgArc.setAttribute('stroke', '#aaaaaa')
   bgArc.setAttribute('stroke-width', '2')
   bgArc.setAttribute('fill', 'none')
-  svg.appendChild(bgArc)
+  group.appendChild(bgArc)
   // 3.2 可见的主圆弧 (白色，节点将位于其上)
   // 这段代码绘制了一个从右到左的半圆，但因为圆心在画布下方，所以看起来是一段弧。
   const mainArc = document.createElementNS('http://www.w3.org/2000/svg', 'path')
-  const x1 = currentCircleCenterX + mainArcRadius * Math.cos(Math.PI / 2) // 右侧点 (3点钟方向)
-  const y1 = currentCircleCenterY + mainArcRadius * Math.sin(Math.PI / 2)
+  const x1 = currentCircleCenterX + mainArcRadius * Math.cos(startAngle)
+  const y1 = currentCircleCenterY + mainArcRadius * Math.sin(startAngle)
   const x2 = currentCircleCenterX + mainArcRadius * Math.cos(-Math.PI / 2) // 左侧点 (9点钟方向)
   const y2 = currentCircleCenterY + mainArcRadius * Math.sin(-Math.PI / 2)
-  mainArc.setAttribute('d', `M ${x1} ${y1} A ${mainArcRadius} ${mainArcRadius} 0 1 1 ${x2} ${y2}`)
+  mainArc.setAttribute('d', `M ${x1} ${y1} A ${mainArcRadius} ${mainArcRadius} ${arcDrawingFlags} ${x2} ${y2}`)
   mainArc.setAttribute('stroke', '#FFFFFF')
   mainArc.setAttribute('stroke-width', '2')
   mainArc.setAttribute('fill', 'none')
-  svg.appendChild(mainArc)
+  group.appendChild(mainArc)
 
   // 4. 绘制 "当前时间" 标记线 (位于顶部中央的短竖线)
   const markerLine = document.createElementNS('http://www.w3.org/2000/svg', 'line')
@@ -157,7 +162,7 @@ function plotNodesOnCircle() {
   markerLine.setAttribute('y2', String(markLineY + 3))
   markerLine.setAttribute('stroke', '#FFF')
   markerLine.setAttribute('stroke-width', '2')
-  svg.appendChild(markerLine)
+  group.appendChild(markerLine)
 
   // --- 节点绘制参数 ---
   const numEvents = props.timestamps.length
@@ -236,7 +241,7 @@ function plotNodesOnCircle() {
     nodeOuterCircle.setAttribute('fill', '#000')
     nodeOuterCircle.setAttribute('stroke', '#FFF')
     nodeOuterCircle.setAttribute('stroke-width', '1.8')
-    svg.appendChild(nodeOuterCircle)
+    group.appendChild(nodeOuterCircle)
 
     // 如果是已发生的事件 (或正在发生的事件)，则在节点中心绘制一个实心白点
     if (timeRelativeToNow <= 0) {
@@ -245,7 +250,7 @@ function plotNodesOnCircle() {
       innerDotPast.setAttribute('cy', String(nodeCenterY))
       innerDotPast.setAttribute('r', String(nodeInnerDotRadiusSmall))
       innerDotPast.setAttribute('fill', '#FFF')
-      svg.appendChild(innerDotPast)
+      group.appendChild(innerDotPast)
     }
 
     // --- 绘制指引线和文字 ---
@@ -272,7 +277,7 @@ function plotNodesOnCircle() {
     line.setAttribute('y2', String(lineEndY))
     line.setAttribute('stroke', '#ccc')
     line.setAttribute('stroke-width', '2')
-    svg.appendChild(line)
+    group.appendChild(line)
 
     // 计算文字的中心点 (位于指引线末端外侧一点)
     const textCenterX = nodeCenterX + textDirectionMultiplier * (nodeDotRadius + lineLength + lineToTextGap) * Math.cos(angleRad)
@@ -319,7 +324,7 @@ function plotNodesOnCircle() {
         textElement.appendChild(tspan)
       })
     }
-    svg.appendChild(textElement)
+    group.appendChild(textElement)
   }
 }
 
@@ -356,12 +361,26 @@ watch(
 <template>
   <!-- 容器 div, 使用绝对定位将组件固定在父容器的底部中心 -->
   <div class="absolute bottom-0 w-full flex justify-center overflow-hidden">
-    <!--
-      SVG 画布元素。
-      ref="svgEl" 将此元素与 <script> 中的 svgEl 变量关联起来。
-      :width 和 :height 绑定到计算属性，使其动态响应 props 或默认值。
-    -->
-    <!-- eslint-disable-next-line vue/html-self-closing -->
-    <svg ref="svgEl" class="w-full" :width="effectiveSvgWidth" :height="effectiveSvgHeight"></svg>
+    <svg class="w-full" :width="effectiveSvgWidth" :height="effectiveSvgHeight">
+      <g ref="contentGroupEl" class="fade-opacity" />
+    </svg>
   </div>
 </template>
+
+<style lang="css" scoped>
+.fade-opacity {
+  width: 1920px;
+  height: 200px;
+  mask: linear-gradient(
+    90deg,
+    transparent 0%,
+    /* 变化非常缓慢 */ rgba(0, 0, 0, 0.1) 10%,
+    /* 快速变化 */ rgba(0, 0, 0, 0.55) 30%,
+    /* 到达完全不透明 */ rgba(0, 0, 0, 1) 35%,
+    /* 保持完全不透明 */ rgba(0, 0, 0, 1) 65%,
+    /* 开始快速变化 */ rgba(0, 0, 0, 0.55) 70%,
+    /* 变化再次减慢 */ rgba(0, 0, 0, 0.1) 90%,
+    transparent 100%
+  );
+}
+</style>
