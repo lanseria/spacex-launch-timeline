@@ -461,7 +461,7 @@ onUnmounted(() => {
         :current-time-offset="currentTimeOffset"
         :svg-width="1920"
       />
-      <TrapezoidGradient class="absolute bottom-0 left-0 z-1" />
+      <TrapezoidGradient class="absolute bottom-40px left-0 z-1" />
       <div class="absolute bottom-10px left-60px z-30 flex gap-4">
         <Gauge
           label="SPEED"
@@ -478,7 +478,7 @@ onUnmounted(() => {
         />
       </div>
 
-      <TrapezoidGradient class="absolute bottom-0 right-0 z-1" horizontal-flip />
+      <TrapezoidGradient class="absolute bottom-40px right-0 z-1" horizontal-flip />
       <div class="absolute bottom-0 right-0 z-1 h-180px w-550px flex flex-col justify-center pr-40px text-right font-saira">
         <div class="text-30px font-600">
           {{ maxQTitle }}
@@ -487,6 +487,7 @@ onUnmounted(() => {
         <div>{{ maxQLine2 }}</div>
         <div>{{ maxQLine3 }}</div>
       </div>
+      <GradientBar class="absolute bottom-0 left-0 z-1" />
     </div>
 
     <Teleport to="body">

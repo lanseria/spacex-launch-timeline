@@ -66,7 +66,7 @@ function drawStaticElements() {
     const y2_blur = circleCenterY.value + (borderArcRadius + 10) * Math.sin(endAngle)
     drawPath(blurredGroup, {
       d: `M ${x1_blur} ${y1_blur} A ${borderArcRadius + 10} ${borderArcRadius + 10} 0 0 1 ${x2_blur} ${y2_blur} Z`,
-      fill: 'rgba(0, 0, 0, 0.7)',
+      fill: 'rgba(0, 0, 0, 0.6)',
     })
 
     const x1_border = circleCenterX.value + borderArcRadius * Math.cos(startAngle)
