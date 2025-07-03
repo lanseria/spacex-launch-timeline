@@ -25,9 +25,9 @@ const props = defineProps({
 // --- Configuration Constants ---
 const GAUGE_RADIUS = 70
 const STROKE_WIDTH = 4
-const GAUGE_VISUAL_START_ANGLE = 255
-const TOTAL_GAUGE_SWEEP_ANGLE = 210
-const CRITICAL_SWEEP_ANGLE = 180
+const GAUGE_VISUAL_START_ANGLE = 240
+const TOTAL_GAUGE_SWEEP_ANGLE = 240
+const CRITICAL_SWEEP_ANGLE = 240
 
 const BACKGROUND_CIRCLE_PADDING = 8
 const TICK_MARK_LENGTH = 6 // 新增：刻度线长度
@@ -161,7 +161,7 @@ const showProgressEndTick = computed(() => {
     <svg :width="svgSize" :height="svgSize" :viewBox="`0 0 ${viewBoxSize} ${viewBoxSize}`">
       <defs>
         <linearGradient id="backgroundCircleGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-          <stop offset="0%" style="stop-color:rgba(20,20,20,0.6); stop-opacity:1" />
+          <stop offset="0%" style="stop-color:rgba(0,0,0,0.5); stop-opacity:1" />
           <stop offset="100%" style="stop-color:rgba(0,0,0,0); stop-opacity:1" />
         </linearGradient>
       </defs>
@@ -177,7 +177,7 @@ const showProgressEndTick = computed(() => {
       <!-- Background Arc - Gray part -->
       <path
         :d="backgroundArcGrayPath"
-        class="stroke-stone-500"
+        class="stroke-white/30"
         fill="none"
         :stroke-width="STROKE_WIDTH"
         stroke-linecap="butt"
@@ -198,7 +198,7 @@ const showProgressEndTick = computed(() => {
         :y1="startTickInnerPoint.y"
         :x2="startTickOuterPoint.x"
         :y2="startTickOuterPoint.y"
-        class="stroke-stone-500"
+        class="stroke-white/30"
         :stroke-width="TICK_STROKE_WIDTH"
         stroke-linecap="butt"
       />
@@ -209,7 +209,7 @@ const showProgressEndTick = computed(() => {
         :y1="endTickInnerPoint.y"
         :x2="endTickOuterPoint.x"
         :y2="endTickOuterPoint.y"
-        class="stroke-red-900"
+        class="stroke-white/30"
         :stroke-width="TICK_STROKE_WIDTH"
         stroke-linecap="butt"
       />
@@ -218,7 +218,7 @@ const showProgressEndTick = computed(() => {
       <path
         v-if="showProgressStartTick"
         :d="progressArcWhitePath"
-        class="stroke-gray-100"
+        class="stroke-white/90"
         fill="none"
         :stroke-width="STROKE_WIDTH"
         stroke-linecap="butt"
@@ -229,11 +229,11 @@ const showProgressEndTick = computed(() => {
       <path
         v-if="redPartSweep > 0.01"
         :d="progressArcRedPath"
-        class="stroke-red-500"
+        class="stroke-white/90"
         fill="none"
         :stroke-width="STROKE_WIDTH"
         stroke-linecap="butt"
-        :style="{ filter: `drop-shadow(0 0 3px rgb(239 68 68 / 0.7))` }"
+        :style="{ filter: `drop-shadow(0 0 2px rgba(0,0,0,0.3))` }"
       />
 
       <!-- Foreground Start Tick (Progress) -->
@@ -243,7 +243,7 @@ const showProgressEndTick = computed(() => {
         :y1="startTickInnerPoint.y"
         :x2="startTickOuterPoint.x"
         :y2="startTickOuterPoint.y"
-        class="stroke-gray-100"
+        class="stroke-white/90"
         :stroke-width="TICK_STROKE_WIDTH"
         stroke-linecap="butt"
         :style="{ filter: `drop-shadow(0 0 2px rgba(0,0,0,0.3))` }"
@@ -256,10 +256,10 @@ const showProgressEndTick = computed(() => {
         :y1="endTickInnerPoint.y"
         :x2="endTickOuterPoint.x"
         :y2="endTickOuterPoint.y"
-        class="stroke-red-500"
+        class="stroke-white/90"
         :stroke-width="TICK_STROKE_WIDTH"
         stroke-linecap="butt"
-        :style="{ filter: `drop-shadow(0 0 3px rgb(239 68 68 / 0.7))` }"
+        :style="{ filter: `drop-shadow(0 0 2px rgba(0,0,0,0.3))` }"
       />
 
       <!-- Text in the center -->
@@ -272,23 +272,23 @@ const showProgressEndTick = computed(() => {
       >
         <tspan
           :x="cx"
-          dy="-2.7em"
-          class="text-12px text-gray-400 font-400"
+          dy="-2.0em"
+          class="text-14px text-white/50 font-500"
         >
           {{ props.label }}
         </tspan>
         <tspan
           :x="cx"
           :y="cy"
-          class="text-42px text-white tabular-nums"
+          class="text-38px text-white tabular-nums"
         >
           {{ progressValue.toFixed(fractionDigits) }}
         </tspan>
         <tspan
           :x="cx"
           :y="cy"
-          dy="2.7em"
-          class="text-12px text-gray-400 font-400"
+          dy="2.0em"
+          class="text-14px text-white/50 font-500"
         >
           {{ props.unit }}
         </tspan>

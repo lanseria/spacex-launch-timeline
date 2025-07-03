@@ -21,10 +21,12 @@ const defaultConfig = {
     { time: 490, name: 'LANDING BURN' },
     { time: 530, name: 'SECO-1' },
   ],
-  maxQTitle: 'MAX-Q',
-  maxQLine1: 'MAXIMUM DYNAMIC PRESSURE',
-  maxQLine2: 'THIS IS THE LARGEST AMOUNT OF STRESS',
-  maxQLine3: 'EXERTED ON THE VEHICLE',
+  displayInfo: {
+    title: 'LIFTOFF',
+    line1: 'FALCON 9 HAS CLEARED THE TOWER',
+    line2: '',
+    line3: '',
+  },
 }
 
 function parseSeconds(timeValue: string | number): number {
@@ -53,10 +55,8 @@ export function useSpaceTimeline() {
     defaultConfig.backgroundImageUrl,
   )
 
-  const maxQTitle = useLocalStorage<string>('spacex_max_q_title', defaultConfig.maxQTitle)
-  const maxQLine1 = useLocalStorage<string>('spacex_max_q_line1', defaultConfig.maxQLine1)
-  const maxQLine2 = useLocalStorage<string>('spacex_max_q_line2', defaultConfig.maxQLine2)
-  const maxQLine3 = useLocalStorage<string>('spacex_max_q_line3', defaultConfig.maxQLine3)
+  // [修改] 将四个独立的 useLocalStorage 替换为单个对象
+  const displayInfo = useLocalStorage('spacex_display_info', defaultConfig.displayInfo)
 
   const showPanel = ref(true)
 
@@ -376,10 +376,7 @@ export function useSpaceTimeline() {
     toggleLaunch,
     resetTimer: resetCoreTimer,
     jumpToTime,
-    maxQTitle,
-    maxQLine1,
-    maxQLine2,
-    maxQLine3,
+    displayInfo,
 
     // --- 高度曲线相关导出 ---
     manualAltitude, // 手动输入的高度 ref

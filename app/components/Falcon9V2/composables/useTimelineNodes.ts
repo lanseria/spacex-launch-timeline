@@ -78,7 +78,7 @@ export function useTimelineNodes(
     const transitionEndOffset = -colorTransitionDuration / 2
 
     // --- 时间缩放因子 ---
-    const avgScale = props.averageDensityFactor?.value ?? 0.5
+    const avgScale = props.averageDensityFactor?.value ?? 1
     const pastScale = props.pastNodeDensityFactor?.value ?? 2.0
     const futureScale = props.futureNodeDensityFactor?.value ?? 1.0
 

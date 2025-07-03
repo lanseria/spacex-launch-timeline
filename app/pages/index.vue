@@ -24,10 +24,7 @@ const {
   resetTimer,
   jumpToTime,
   restoreBackgroundImage,
-  maxQTitle,
-  maxQLine1,
-  maxQLine2,
-  maxQLine3,
+  displayInfo,
   manualAltitude,
   altitudeProfile,
   currentAltitude,
@@ -208,47 +205,51 @@ onUnmounted(() => {
           <div class="my-1 border-t border-gray-600" />
           <div>
             <h2 class="mb-2 text-lg font-semibold">
-              MAX-Q 显示文本配置
+              右下角显示文本配置
             </h2>
             <div class="space-y-1">
               <div>
-                <label for="maxQTitleInput" class="mb-1 block text-sm text-gray-300 font-medium">标题</label>
+                <label for="displayInfoTitleInput" class="mb-1 block text-sm text-gray-300 font-medium">标题</label>
+                <!-- [修改] v-model 指向 displayInfo.title -->
                 <input
-                  id="maxQTitleInput"
-                  v-model="maxQTitle"
+                  id="displayInfoTitleInput"
+                  v-model="displayInfo.title"
                   type="text"
                   class="input-field w-full dark:bg-gray-700 dark:text-white"
-                  aria-label="MAX-Q 标题"
+                  aria-label="显示文本标题"
                 >
               </div>
               <div>
-                <label for="maxQLine1Input" class="mb-1 block text-sm text-gray-300 font-medium">描述行 1</label>
+                <label for="displayInfoLine1Input" class="mb-1 block text-sm text-gray-300 font-medium">描述行 1</label>
+                <!-- [修改] v-model 指向 displayInfo.line1 -->
                 <input
-                  id="maxQLine1Input"
-                  v-model="maxQLine1"
+                  id="displayInfoLine1Input"
+                  v-model="displayInfo.line1"
                   type="text"
                   class="input-field w-full dark:bg-gray-700 dark:text-white"
-                  aria-label="MAX-Q 描述行 1"
+                  aria-label="显示文本描述行 1"
                 >
               </div>
               <div>
-                <label for="maxQLine2Input" class="mb-1 block text-sm text-gray-300 font-medium">描述行 2</label>
+                <label for="displayInfoLine2Input" class="mb-1 block text-sm text-gray-300 font-medium">描述行 2</label>
+                <!-- [修改] v-model 指向 displayInfo.line2 -->
                 <input
-                  id="maxQLine2Input"
-                  v-model="maxQLine2"
+                  id="displayInfoLine2Input"
+                  v-model="displayInfo.line2"
                   type="text"
                   class="input-field w-full dark:bg-gray-700 dark:text-white"
-                  aria-label="MAX-Q 描述行 2"
+                  aria-label="显示文本描述行 2"
                 >
               </div>
               <div>
-                <label for="maxQLine3Input" class="mb-1 block text-sm text-gray-300 font-medium">描述行 3</label>
+                <label for="displayInfoLine3Input" class="mb-1 block text-sm text-gray-300 font-medium">描述行 3</label>
+                <!-- [修改] v-model 指向 displayInfo.line3 -->
                 <input
-                  id="maxQLine3Input"
-                  v-model="maxQLine3"
+                  id="displayInfoLine3Input"
+                  v-model="displayInfo.line3"
                   type="text"
                   class="input-field w-full dark:bg-gray-700 dark:text-white"
-                  aria-label="MAX-Q 描述行 3"
+                  aria-label="显示文本描述行 3"
                 >
               </div>
             </div>
@@ -463,13 +464,13 @@ onUnmounted(() => {
       />
       <TrapezoidGradient class="absolute bottom-40px left-0 z-1" />
       <div class="absolute bottom-10px left-60px z-30 flex gap-4">
-        <Gauge
+        <Falcon9V2Gauge
           label="SPEED"
           unit="KM/H"
           :value="currentSpeed"
           :max-value="30000"
         />
-        <Gauge
+        <Falcon9V2Gauge
           label="ALTITUDE"
           unit="KM"
           :value="currentAltitude"
@@ -480,12 +481,13 @@ onUnmounted(() => {
 
       <TrapezoidGradient class="absolute bottom-40px right-0 z-1" horizontal-flip />
       <div class="absolute bottom-0 right-0 z-1 h-180px w-550px flex flex-col justify-center pr-40px text-right font-saira">
+        <!-- [修改] 使用 displayInfo 对象的属性 -->
         <div class="text-30px font-600">
-          {{ maxQTitle }}
+          {{ displayInfo.title }}
         </div>
-        <div>{{ maxQLine1 }}</div>
-        <div>{{ maxQLine2 }}</div>
-        <div>{{ maxQLine3 }}</div>
+        <div>{{ displayInfo.line1 }}</div>
+        <div>{{ displayInfo.line2 }}</div>
+        <div>{{ displayInfo.line3 }}</div>
       </div>
       <GradientBar class="absolute bottom-0 left-0 z-1" />
     </div>
