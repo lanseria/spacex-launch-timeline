@@ -13,7 +13,6 @@ const props = defineProps<{
   currentTimeOffset?: number
   svgWidth?: number
   svgHeight?: number
-  // [NEW] 新增 Prop
   averageDensityFactor?: number
   pastNodeDensityFactor?: number
   futureNodeDensityFactor?: number
@@ -25,10 +24,11 @@ const sharpContentGroupEl = useTemplateRef<SVGGElement>('sharpContentGroupEl')
 const blurredContentGroupEl = useTemplateRef<SVGGElement>('blurredContentGroupEl')
 
 // --- 使用 Composables 获取响应式数据 ---
-// toRefs 确保传递给 composable 的 props 保持响应性
 const propsRefs = toRefs(props)
 const geometry = useTimelineGeometry(propsRefs)
-const { processedNodes } = useTimelineNodes(propsRefs, toRefs(geometry))
+
+// [修改] 直接传递 geometry 对象，不再使用 toRefs()
+const { processedNodes } = useTimelineNodes(propsRefs, geometry)
 
 // --- 颜色常量 (仅用于静态元素) ---
 const COLOR_PAST_PRESENT_STR = 'rgba(255, 255, 255, 1)'

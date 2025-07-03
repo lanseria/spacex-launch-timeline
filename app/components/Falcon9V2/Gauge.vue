@@ -27,17 +27,17 @@ const GAUGE_RADIUS = 70
 const STROKE_WIDTH = 4
 const GAUGE_VISUAL_START_ANGLE = 240
 const TOTAL_GAUGE_SWEEP_ANGLE = 240
-const CRITICAL_SWEEP_ANGLE = 240
 
 const BACKGROUND_CIRCLE_PADDING = 8
-const TICK_MARK_LENGTH = 6 // 新增：刻度线长度
-const TICK_STROKE_WIDTH = 2.5 // 新增：刻度线粗细 (可以与 STROKE_WIDTH 不同，使其更细)
+const TICK_MARK_LENGTH = 6
+const TICK_STROKE_WIDTH = 2.5
 
 const progressValue = ref(props.value)
 watch(() => props.value, (newValue) => {
   progressValue.value = Math.max(0, Math.min(props.maxValue, newValue))
 })
 
+// --- Geometry Calculations (no changes) ---
 const backgroundCircleRadius = computed(() => GAUGE_RADIUS + BACKGROUND_CIRCLE_PADDING)
 const effectiveOuterRadius = computed(() => Math.max(backgroundCircleRadius.value, GAUGE_RADIUS + STROKE_WIDTH / 2))
 const viewBoxSize = computed(() => effectiveOuterRadius.value * 2)
@@ -45,24 +45,19 @@ const cx = computed(() => effectiveOuterRadius.value)
 const cy = computed(() => effectiveOuterRadius.value)
 const svgSize = computed(() => viewBoxSize.value)
 
+// --- SVG Helper Functions (no changes) ---
 function polarToCartesian(centerX: number, centerY: number, radius: number, angleInDegrees: number) {
-  const angleInRadians = (angleInDegrees - 90) * Number.parseFloat('3.141592653589793') / 180.0 // Math.PI
+  const angleInRadians = (angleInDegrees - 90) * Math.PI / 180.0
   return {
     x: centerX + (radius * Math.cos(angleInRadians)),
     y: centerY + (radius * Math.sin(angleInRadians)),
   }
 }
 
-function describeArc(
-  x: number,
-  y: number,
-  radius: number,
-  startAngleDeg: number,
-  endAngleDeg: number,
-): string {
-  if (Math.abs(endAngleDeg - startAngleDeg) >= 360) {
+function describeArc(x: number, y: number, radius: number, startAngleDeg: number, endAngleDeg: number): string {
+  if (Math.abs(endAngleDeg - startAngleDeg) >= 360)
     endAngleDeg = startAngleDeg + 359.99
-  }
+
   if (Math.abs(endAngleDeg - startAngleDeg) < 0.01)
     return ''
 
@@ -72,68 +67,39 @@ function describeArc(
   const largeArcFlag = Math.abs(arcSweepDegrees) <= 180 ? '0' : '1'
   const sweepFlag = arcSweepDegrees > 0 ? '1' : '0'
 
-  const d = [
-    'M',
-    startPoint.x,
-    startPoint.y,
-    'A',
-    radius,
-    radius,
-    0,
-    largeArcFlag,
-    sweepFlag,
-    endPoint.x,
-    endPoint.y,
-  ].join(' ')
-  return d
+  return `M ${startPoint.x} ${startPoint.y} A ${radius} ${radius} 0 ${largeArcFlag} ${sweepFlag} ${endPoint.x} ${endPoint.y}`
 }
 
-const backgroundArcGrayPath = computed(() => {
-  const start = GAUGE_VISUAL_START_ANGLE
-  const end = GAUGE_VISUAL_START_ANGLE + CRITICAL_SWEEP_ANGLE
-  return describeArc(cx.value, cy.value, GAUGE_RADIUS, start, end)
-})
+// --- [修改] Arc Path Calculations ---
 
-const backgroundArcDarkRedPath = computed(() => {
-  const start = GAUGE_VISUAL_START_ANGLE + CRITICAL_SWEEP_ANGLE
+// 计算完整的背景弧线路径
+const backgroundArcPath = computed(() => {
+  const start = GAUGE_VISUAL_START_ANGLE
   const end = GAUGE_VISUAL_START_ANGLE + TOTAL_GAUGE_SWEEP_ANGLE
   return describeArc(cx.value, cy.value, GAUGE_RADIUS, start, end)
 })
 
+// [删除] backgroundArcDarkRedPath 不再需要
+
+// 计算当前进度占总进度的比例
 const currentProgressRatio = computed(() => {
   const val = Math.max(0, Math.min(props.maxValue, progressValue.value))
   return props.maxValue === 0 ? 0 : val / props.maxValue
 })
 
+// 将比例转换为角度
 const currentProgressAngle = computed(() => currentProgressRatio.value * TOTAL_GAUGE_SWEEP_ANGLE)
 
-const whitePartSweep = computed(() => {
-  return Math.min(currentProgressAngle.value, CRITICAL_SWEEP_ANGLE)
-})
-
-const redPartSweep = computed(() => {
-  if (currentProgressAngle.value <= CRITICAL_SWEEP_ANGLE)
-    return 0
-  return currentProgressAngle.value - CRITICAL_SWEEP_ANGLE
-})
-
-const progressArcWhitePath = computed(() => {
-  if (whitePartSweep.value <= 0.01)
+// [修改] 计算单色的前景进度条路径
+const progressArcPath = computed(() => {
+  if (currentProgressAngle.value <= 0.01)
     return ''
   const start = GAUGE_VISUAL_START_ANGLE
-  const end = GAUGE_VISUAL_START_ANGLE + whitePartSweep.value
+  const end = GAUGE_VISUAL_START_ANGLE + currentProgressAngle.value
   return describeArc(cx.value, cy.value, GAUGE_RADIUS, start, end)
 })
 
-const progressArcRedPath = computed(() => {
-  if (redPartSweep.value <= 0.01)
-    return ''
-  const start = GAUGE_VISUAL_START_ANGLE + CRITICAL_SWEEP_ANGLE
-  const end = GAUGE_VISUAL_START_ANGLE + CRITICAL_SWEEP_ANGLE + redPartSweep.value
-  return describeArc(cx.value, cy.value, GAUGE_RADIUS, start, end)
-})
-
-// --- 刻度线计算 ---
+// --- Tick Mark Calculations ---
 const gaugeEndAngle = computed(() => GAUGE_VISUAL_START_ANGLE + TOTAL_GAUGE_SWEEP_ANGLE)
 
 // 起始刻度线坐标
@@ -144,14 +110,11 @@ const startTickInnerPoint = computed(() => polarToCartesian(cx.value, cy.value, 
 const endTickOuterPoint = computed(() => polarToCartesian(cx.value + STROKE_WIDTH / 2, cy.value, GAUGE_RADIUS, gaugeEndAngle.value + 1.6))
 const endTickInnerPoint = computed(() => polarToCartesian(cx.value, cy.value, GAUGE_RADIUS - TICK_MARK_LENGTH, gaugeEndAngle.value + 1.6))
 
-// 前景起始刻度线是否可见 (有进度时)
-const showProgressStartTick = computed(() => progressValue.value > 0 && whitePartSweep.value > 0.01)
-
-// 前景结束刻度线是否可见 (满进度时)
+// 控制刻度线是否可见的逻辑保持不变
+const showProgressStartTick = computed(() => progressValue.value > 0)
 const showProgressEndTick = computed(() => {
-  // 当进度值达到或超过最大值时，并且最大值不为0
   if (props.maxValue === 0)
-    return false // 避免 maxValue 为0时也显示
+    return false
   return progressValue.value >= props.maxValue
 })
 </script>
@@ -174,23 +137,16 @@ const showProgressEndTick = computed(() => {
         stroke="none"
       />
 
-      <!-- Background Arc - Gray part -->
+      <!-- [修改] Background Arc - 单一路径 -->
       <path
-        :d="backgroundArcGrayPath"
+        :d="backgroundArcPath"
         class="stroke-white/30"
         fill="none"
         :stroke-width="STROKE_WIDTH"
         stroke-linecap="butt"
       />
 
-      <!-- Background Arc - Dark Red part -->
-      <path
-        :d="backgroundArcDarkRedPath"
-        class="stroke-red-900"
-        fill="none"
-        :stroke-width="STROKE_WIDTH"
-        stroke-linecap="butt"
-      />
+      <!-- [删除] 不再需要深红色的背景路径 -->
 
       <!-- Background Start Tick -->
       <line
@@ -214,10 +170,10 @@ const showProgressEndTick = computed(() => {
         stroke-linecap="butt"
       />
 
-      <!-- Foreground Progress Arc - White part -->
+      <!-- [修改] Foreground Progress Arc - 单一路径 -->
       <path
-        v-if="showProgressStartTick"
-        :d="progressArcWhitePath"
+        v-if="progressArcPath"
+        :d="progressArcPath"
         class="stroke-white/90"
         fill="none"
         :stroke-width="STROKE_WIDTH"
@@ -225,16 +181,7 @@ const showProgressEndTick = computed(() => {
         :style="{ filter: `drop-shadow(0 0 2px rgba(0,0,0,0.3))` }"
       />
 
-      <!-- Foreground Progress Arc - Red part -->
-      <path
-        v-if="redPartSweep > 0.01"
-        :d="progressArcRedPath"
-        class="stroke-white/90"
-        fill="none"
-        :stroke-width="STROKE_WIDTH"
-        stroke-linecap="butt"
-        :style="{ filter: `drop-shadow(0 0 2px rgba(0,0,0,0.3))` }"
-      />
+      <!-- [删除] 不再需要区分白色和红色的前景路径 -->
 
       <!-- Foreground Start Tick (Progress) -->
       <line
@@ -262,7 +209,7 @@ const showProgressEndTick = computed(() => {
         :style="{ filter: `drop-shadow(0 0 2px rgba(0,0,0,0.3))` }"
       />
 
-      <!-- Text in the center -->
+      <!-- Text in the center (no changes) -->
       <text
         :x="cx"
         :y="cy"

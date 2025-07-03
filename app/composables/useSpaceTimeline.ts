@@ -4,6 +4,8 @@ const defaultConfig = {
   vehicle: 'Falcon 9 Block 5',
   speed: 7501,
   altitude: 64, // 这是手动输入的默认高度
+  fuelPercentage: 100,
+  gForce: 1.0,
   backgroundImageUrl: '/assets/images/falcon9_16_9.jpg',
   events: [
     { time: -300, name: 'ENGINE CHILL' },
@@ -72,6 +74,8 @@ export function useSpaceTimeline() {
   const jumpTargetTimeRaw = ref<string | number>('')
 
   const currentAltitude = useLocalStorage<number>('spacex_altitude_km', defaultConfig.altitude)
+  const fuelPercentage = useLocalStorage<number>('spacex_fuel_percentage', defaultConfig.fuelPercentage)
+  const gForce = useLocalStorage<number>('spacex_g_force', defaultConfig.gForce)
 
   const isTPlus = computed(() => currentTimeOffset.value >= 0)
   const missionTimeSeconds = computed(() => parseSeconds(missionTimeRaw.value))
@@ -252,7 +256,9 @@ export function useSpaceTimeline() {
     missionName,
     vehicleName,
     currentSpeed,
-    // currentAltitude, // 现在是 computed
+    currentAltitude,
+    fuelPercentage,
+    gForce,
     backgroundImageUrl,
     showPanel,
     restoreBackgroundImage,
@@ -275,6 +281,5 @@ export function useSpaceTimeline() {
     resetTimer: resetCoreTimer,
     jumpToTime,
     displayInfo,
-    currentAltitude,
   }
 }

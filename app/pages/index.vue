@@ -13,13 +13,40 @@ const {
   currentTimeOffset,
   currentSpeed,
   currentAltitude,
+  fuelPercentage,
+  gForce,
+  backgroundImageUrl,
+  missionTimeRaw,
+  timeValueRaw,
+  isStarted,
+  isPaused,
+  initialCountdownOffset,
+  jumpTargetTimeRaw,
+  addNode,
+  deleteNode,
+  toggleLaunch,
+  resetTimer,
+  jumpToTime,
+  restoreBackgroundImage,
 } = useSpaceTimeline()
 
-// panelRef 用于 onClickOutside，指向新组件的根元素
 const panelRef = ref(null)
-onClickOutside(panelRef, () => {
-  if (showPanel.value)
-    showPanel.value = false
+const localBackgroundFileObjectUrl = ref<string | null>(null)
+function handleBackgroundDialog(file: File | null) {
+  if (localBackgroundFileObjectUrl.value) {
+    URL.revokeObjectURL(localBackgroundFileObjectUrl.value)
+  }
+  if (file) {
+    const newUrl = URL.createObjectURL(file)
+    backgroundImageUrl.value = newUrl
+    localBackgroundFileObjectUrl.value = newUrl
+  }
+}
+
+onUnmounted(() => {
+  if (localBackgroundFileObjectUrl.value) {
+    URL.revokeObjectURL(localBackgroundFileObjectUrl.value)
+  }
 })
 </script>
 
@@ -30,19 +57,40 @@ onClickOutside(panelRef, () => {
         <Title>SpaceX 发射时间线 - 主页</Title>
       </Head>
 
-      <div class="relative z-10 mx-auto my-4 text-center">
+      <div class="relative z-10 mx-auto my-4 text-center" @click="showPanel = !showPanel">
         <p class="text-40px text-white font-500 font-saira">
           {{ vehicleName }}
         </p>
       </div>
 
       <!-- [修改] 使用新的 ControlPanel 组件 -->
-      <ControlPanel v-show="showPanel" ref="panelRef" />
-
-      <div
-        class="fixed inset-0 z-0"
-        aria-hidden="true"
-        @click="() => { showPanel = !showPanel }"
+      <ControlPanel
+        v-if="showPanel"
+        ref="panelRef"
+        v-model:mission-name="missionName"
+        v-model:vehicle-name="vehicleName"
+        v-model:current-speed="currentSpeed"
+        v-model:current-altitude="currentAltitude"
+        v-model:fuel-percentage="fuelPercentage"
+        v-model:g-force="gForce"
+        v-model:mission-time-raw="missionTimeRaw"
+        v-model:time-value-raw="timeValueRaw"
+        v-model:jump-target-time-raw="jumpTargetTimeRaw"
+        v-model:timestamps="processedTimestamps"
+        v-model:node-names="nodeNames"
+        v-model:display-info="displayInfo"
+        :background-image-url="backgroundImageUrl"
+        :is-started="isStarted"
+        :is-paused="isPaused"
+        :initial-countdown-offset="initialCountdownOffset"
+        :current-time-offset="currentTimeOffset"
+        @add-node="addNode"
+        @delete-node="deleteNode"
+        @toggle-launch="toggleLaunch"
+        @reset-timer="resetTimer"
+        @jump-to-time="jumpToTime"
+        @restore-background-image="restoreBackgroundImage"
+        @open-background-dialog="handleBackgroundDialog"
       />
 
       <div class="fixed bottom-16px left-1/2 z-50 mx-auto max-w-md text-center font-400 font-saira -translate-x-1/2">
