@@ -37,6 +37,8 @@ const missionTimeRaw = defineModel<number>('missionTimeRaw', { required: true })
 const timeValueRaw = defineModel<number>('timeValueRaw', { required: true })
 const jumpTargetTimeRaw = defineModel<string | number>('jumpTargetTimeRaw', { required: true })
 const showLeftGauges = defineModel<boolean>('showLeftGauges', { required: true })
+const showRightPanel = defineModel<boolean>('showRightPanel', { required: true })
+const rightPanelMode = defineModel<'gauges' | 'displayInfo'>('rightPanelMode', { required: true })
 
 // 模态框的显示状态
 const showEventsModal = ref(false)
@@ -83,9 +85,6 @@ watch(currentBackgroundFile, () => {
         <div class="space-y-3">
           <button class="btn-action w-full bg-indigo-600 hover:bg-indigo-700" @click="showEventsModal = true">
             管理事件节点
-          </button>
-          <button class="btn-action w-full bg-purple-600 hover:bg-purple-700" @click="showDisplayInfoModal = true">
-            配置右下角文本
           </button>
         </div>
       </div>
@@ -169,6 +168,7 @@ watch(currentBackgroundFile, () => {
           飞行数据与页面配置
         </h2>
         <div class="space-y-3">
+          <!-- 左侧仪表盘控制 -->
           <div class="border border-gray-700 rounded-md p-3">
             <div class="flex items-center justify-between">
               <label for="showLeftGaugesSwitch" class="text-sm text-gray-300 font-medium">显示左侧仪表盘</label>
@@ -188,13 +188,44 @@ watch(currentBackgroundFile, () => {
               </div>
             </div>
           </div>
-          <div>
-            <label for="fuelInput" class="mb-1 block text-sm text-gray-300 font-medium">燃料剩余 (%)</label>
-            <input id="fuelInput" v-model.number="fuelPercentage" type="number" :min="0" :max="100" class="input-field w-full dark:bg-gray-700 dark:text-white" aria-label="燃料剩余百分比">
-          </div>
-          <div>
-            <label for="gForceInput" class="mb-1 block text-sm text-gray-300 font-medium">G-Force</label>
-            <input id="gForceInput" v-model.number="gForce" type="number" :step="0.1" class="input-field w-full dark:bg-gray-700 dark:text-white" aria-label="G-Force">
+
+          <!-- [新增] 右侧面板控制 -->
+          <div class="border border-gray-700 rounded-md p-3">
+            <div class="flex items-center justify-between">
+              <label for="showRightPanelSwitch" class="text-sm text-gray-300 font-medium">显示右侧面板</label>
+              <label for="showRightPanelSwitch" class="relative inline-flex cursor-pointer items-center">
+                <input id="showRightPanelSwitch" v-model="showRightPanel" type="checkbox" class="peer sr-only">
+                <div class="h-6 w-11 rounded-full bg-gray-600 after:absolute after:start-[2px] after:top-[2px] after:h-5 after:w-5 after:border after:border-gray-300 dark:border-gray-500 after:rounded-full after:bg-white dark:bg-gray-700 peer-checked:bg-blue-600 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-blue-400 after:transition-all after:content-[''] peer-checked:after:translate-x-full" />
+              </label>
+            </div>
+            <div v-if="showRightPanel" class="mt-3 border-t border-gray-700 pt-3 space-y-3">
+              <fieldset>
+                <legend class="mb-2 text-sm text-gray-300 font-medium">
+                  右侧面板模式
+                </legend>
+                <div class="flex items-center gap-4">
+                  <div class="flex items-center">
+                    <input id="mode-displayInfo" v-model="rightPanelMode" type="radio" value="displayInfo" name="right-panel-mode" class="h-4 w-4 border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-600">
+                    <label for="mode-displayInfo" class="ml-2 block text-sm text-gray-300">文本信息</label>
+                  </div>
+                  <div class="flex items-center">
+                    <input id="mode-gauges" v-model="rightPanelMode" type="radio" value="gauges" name="right-panel-mode" class="h-4 w-4 border-gray-600 bg-gray-700 text-blue-600 focus:ring-blue-600">
+                    <label for="mode-gauges" class="ml-2 block text-sm text-gray-300">仪表盘</label>
+                  </div>
+                </div>
+              </fieldset>
+              <div v-if="rightPanelMode === 'gauges'">
+                <label for="fuelInput" class="mb-1 block text-sm text-gray-300 font-medium">燃料剩余 (%)</label>
+                <input id="fuelInput" v-model.number="fuelPercentage" type="number" :min="0" :max="100" class="input-field w-full dark:bg-gray-700 dark:text-white" aria-label="燃料剩余百分比">
+              </div>
+              <div v-if="rightPanelMode === 'gauges'">
+                <label for="gForceInput" class="mb-1 block text-sm text-gray-300 font-medium">G-Force</label>
+                <input id="gForceInput" v-model.number="gForce" type="number" :step="0.1" class="input-field w-full dark:bg-gray-700 dark:text-white" aria-label="G-Force">
+              </div>
+              <button v-if="rightPanelMode === 'displayInfo'" class="btn-action w-full bg-purple-600 hover:bg-purple-700" @click="showDisplayInfoModal = true">
+                配置右下角文本
+              </button>
+            </div>
           </div>
         </div>
 

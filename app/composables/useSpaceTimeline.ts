@@ -61,6 +61,8 @@ export function useSpaceTimeline() {
   const showPanel = ref(true)
   // [新增] 添加一个状态来控制左侧仪表盘的显示/隐藏，并持久化
   const showLeftGauges = useLocalStorage<boolean>('spacex_show_left_gauges', true)
+  const showRightPanel = useLocalStorage<boolean>('spacex_show_right_panel', true)
+  const rightPanelMode = useLocalStorage<'gauges' | 'displayInfo'>('spacex_right_panel_mode', 'displayInfo')
 
   const timestamps = useLocalStorage<number[]>('spacex_timestamps_seconds', initialEventTimes)
   const nodeNames = useLocalStorage<string[]>('spacex_nodenames_zh', initialEventNames)
@@ -266,6 +268,8 @@ export function useSpaceTimeline() {
     backgroundImageUrl,
     showPanel,
     showLeftGauges,
+    showRightPanel,
+    rightPanelMode,
     restoreBackgroundImage,
     timestamps,
     nodeNames,

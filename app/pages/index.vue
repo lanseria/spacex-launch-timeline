@@ -5,6 +5,8 @@ const {
   missionName,
   showPanel,
   showLeftGauges,
+  showRightPanel,
+  rightPanelMode,
   timerClock,
   displayInfo,
   nodeNames,
@@ -63,7 +65,7 @@ onUnmounted(() => {
         </p>
       </div>
 
-      <!-- [修改] 使用新的 ControlPanel 组件 -->
+      <!-- 使用新的 ControlPanel 组件 -->
       <ControlPanel
         v-if="showPanel"
         ref="panelRef"
@@ -80,6 +82,8 @@ onUnmounted(() => {
         v-model:node-names="nodeNames"
         v-model:display-info="displayInfo"
         v-model:show-left-gauges="showLeftGauges"
+        v-model:show-right-panel="showRightPanel"
+        v-model:right-panel-mode="rightPanelMode"
         :background-image-url="backgroundImageUrl"
         :is-started="isStarted"
         :is-paused="isPaused"
@@ -121,7 +125,7 @@ onUnmounted(() => {
         :svg-width="1920"
       />
 
-      <!-- [修改] 使用 v-if 控制左侧元素的显示 -->
+      <!-- 使用 v-if 控制左侧元素的显示 -->
       <template v-if="showLeftGauges">
         <TrapezoidGradient class="absolute bottom-40px left-0 z-1" />
         <div class="absolute bottom-10px left-60px z-30 flex gap-4">
@@ -141,15 +145,35 @@ onUnmounted(() => {
         </div>
       </template>
 
-      <TrapezoidGradient class="absolute bottom-40px right-0 z-1" horizontal-flip />
-      <div class="absolute bottom-0 right-0 z-1 h-180px w-550px flex flex-col justify-center pr-40px text-right font-saira">
-        <div class="text-30px font-600">
-          {{ displayInfo.title }}
+      <!-- 右侧面板 -->
+      <template v-if="showRightPanel">
+        <TrapezoidGradient class="absolute bottom-40px right-0 z-1" horizontal-flip />
+        <!-- 模式一: 显示文本信息 -->
+        <div v-if="rightPanelMode === 'displayInfo'" class="absolute bottom-0 right-0 z-1 h-180px w-550px flex flex-col justify-center pr-40px text-right font-saira">
+          <div class="text-30px font-600">
+            {{ displayInfo.title }}
+          </div>
+          <div>{{ displayInfo.line1 }}</div>
+          <div>{{ displayInfo.line2 }}</div>
+          <div>{{ displayInfo.line3 }}</div>
         </div>
-        <div>{{ displayInfo.line1 }}</div>
-        <div>{{ displayInfo.line2 }}</div>
-        <div>{{ displayInfo.line3 }}</div>
-      </div>
+        <!-- 模式二: 显示仪表盘 -->
+        <div v-if="rightPanelMode === 'gauges'" class="absolute bottom-10px right-60px z-30 flex flex-row-reverse gap-4">
+          <Falcon9V2Gauge
+            label="G-FORCE"
+            unit="G"
+            :value="gForce"
+            :max-value="8"
+            :fraction-digits="1"
+          />
+          <Falcon9V2Gauge
+            label="FUEL"
+            unit="%"
+            :value="fuelPercentage"
+            :max-value="100"
+          />
+        </div>
+      </template>
       <GradientBar class="absolute bottom-0 left-0 z-1" />
     </div>
   </LayoutAdapter>
