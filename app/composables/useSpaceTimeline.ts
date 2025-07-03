@@ -46,6 +46,7 @@ export function useSpaceTimeline() {
     : 3600
   const firstNegativeEventTime = initialEventTimes.find(t => t < 0)
   const defaultCountdownStartSeconds = firstNegativeEventTime ? Math.abs(firstNegativeEventTime) : 60
+  const timelineVersion = useLocalStorage<'Falcon9V1' | 'Falcon9V2'>('spacex_timeline_version', 'Falcon9V2')
 
   const missionName = useLocalStorage<string>('spacex_mission_name', defaultConfig.missionName)
   const vehicleName = useLocalStorage<string>('spacex_vehicle_name', defaultConfig.vehicle)
@@ -259,6 +260,7 @@ export function useSpaceTimeline() {
   resetCoreTimer()
 
   return {
+    timelineVersion,
     missionName,
     vehicleName,
     currentSpeed,

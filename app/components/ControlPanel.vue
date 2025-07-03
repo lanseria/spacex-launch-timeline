@@ -24,6 +24,7 @@ const emit = defineEmits([
 ])
 // --- 使用 defineModel ---
 // defineModel 会自动注册 prop 和对应的 update 事件，极大地简化了代码
+const timelineVersion = defineModel<'Falcon9V1' | 'Falcon9V2'>('timelineVersion', { required: true })
 const missionName = defineModel<string>('missionName', { required: true })
 const vehicleName = defineModel<string>('vehicleName', { required: true })
 const timestamps = defineModel<number[]>('timestamps', { required: true })
@@ -73,6 +74,27 @@ watch(currentBackgroundFile, () => {
         <h2 class="text-lg font-semibold">
           主要配置
         </h2>
+        <!-- [新增] UI 版本选择器 -->
+        <div>
+          <label class="mb-2 block text-sm text-gray-300 font-medium">UI 版本</label>
+          <fieldset class="grid grid-cols-2 gap-2 rounded-lg bg-gray-700/50 p-1">
+            <legend class="sr-only">
+              UI Version
+            </legend>
+            <div>
+              <input id="version-v1" v-model="timelineVersion" type="radio" value="Falcon9V1" class="peer sr-only">
+              <label for="version-v1" class="block cursor-pointer rounded-md py-1.5 text-center text-sm text-gray-400 font-medium transition-colors duration-150 peer-checked:bg-gray-600 peer-checked:text-white">
+                V1
+              </label>
+            </div>
+            <div>
+              <input id="version-v2" v-model="timelineVersion" type="radio" value="Falcon9V2" class="peer sr-only">
+              <label for="version-v2" class="block cursor-pointer rounded-md py-1.5 text-center text-sm text-gray-400 font-medium transition-colors duration-150 peer-checked:bg-gray-600 peer-checked:text-white">
+                V2 (推荐)
+              </label>
+            </div>
+          </fieldset>
+        </div>
         <div>
           <label for="missionNameInput" class="mb-1 block text-sm text-gray-300 font-medium">任务名称</label>
           <input id="missionNameInput" v-model="missionName" type="text" class="input-field w-full dark:bg-gray-700 dark:text-white" aria-label="任务名称">

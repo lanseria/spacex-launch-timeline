@@ -1,143 +1,111 @@
 # SpaceX 发射时间线 UI (SpaceX Launch Timeline UI)
 
-一个基于 Nuxt 3 和 Vue 3 构建的交互式 SpaceX 发射时间线模拟用户界面。用户可以自定义发射事件、总任务时长、倒计时起点，并通过一个动态的SVG圆弧时间线可视化整个发射过程。
+一个基于 Nuxt 3 和 Vue 3 构建的高度可定制、交互式的 SpaceX 发射时间线模拟器。用户可以自定义发射事件、时间控制，并可在两种截然不同的视觉风格（V1/V2）之间切换，以获得独特的视觉体验。
 
 ![SpaceX Launch Timeline UI 预览](./spacex-timeline-preview.jpg)
 
 ## ✨ 项目特色
 
-- **动态SVG时间线**: 事件节点在SVG圆弧上平滑移动，实时反映发射倒计时和任务进展。
-- **可自定义事件**: 用户可以添加、删除和编辑时间线上的事件节点（名称和发生时间）。
-- **灵活的时间控制**:
-  - 自定义倒计时起点 (T- 多少秒开始)。
-  - 自定义SVG圆弧代表的总时间跨度。
-- **默认配置**: 包含一个模拟的星链发射任务作为默认事件集。
-- **本地存储**: 用户对事件列表的修改会自动保存在浏览器的 localStorage 中，下次访问时恢复。
-- **现代技术栈**: 使用 Nuxt 3、Vue 3、TypeScript 和 UnoCSS 构建。
-- **简约设计**: 专注于核心功能，采用深色主题，UI元素简洁。
-- **中文界面**: 所有UI文本均为中文。
+- **双 UI 版本 (Dual UI Versions)**: 内置两种视觉与技术实现迥异的 UI 界面 (传统 V1 / 现代 V2)，可在控制面板中一键切换，默认使用 V2 版本。
+- **动态 SVG 时间线**: 事件节点在 SVG 圆弧上平滑移动，实时反映发射倒计时和任务进展。
+- **高级 V2 视觉效果**:
+  - 采用 SVG `<mask>` 技术实现过去/未来时间轴的平滑颜色过渡。
+  - 节点在接近 "现在" 时，其分布密度会动态变化，产生视觉上的拉伸/压缩效果。
+  - 更精致的仪表盘和UI元素设计。
+- **高度可定制**:
+  - **事件管理**: 在模态框中轻松添加、删除和编辑时间线上的事件节点（名称和发生时间）。
+  - **时间控制**: 自定义倒计时起点 (T- 多少秒开始) 和 SVG 圆弧代表的总时间跨度。
+  - **飞行数据**: 实时修改速度、高度、燃料、G-Force 等遥测数据。
+  - **界面显隐**: 自由控制左右侧仪表盘的显示/隐藏，并可切换右侧面板为“遥测数据”或“文本信息”模式。
+- **持久化存储**: 所有用户配置（包括选择的UI版本、事件列表、遥测数据等）都会自动保存在浏览器的 `localStorage` 中，下次访问时无缝恢复。
+- **现代技术栈**: 使用 Nuxt 3 (SPA 模式)、Vue 3 (Composition API)、TypeScript 和 UnoCSS 构建，代码风格严格遵循 `@antfu/eslint-config`。
+- **固定比例布局**: 针对 `1920x1080` 分辨率设计，通过 CSS `transform: scale()` 自动缩放以适应不同屏幕大小，保证视觉效果一致性。
+
+## 🎨 UI 版本对比
+
+您可以在 **主要配置 -> UI 版本** 中切换两种风格：
+
+| 特性         | Falcon9V1 (传统版)                         | Falcon9V2 (现代版 - 默认)                                                      |
+| :----------- | :----------------------------------------- | :----------------------------------------------------------------------------- |
+| **技术实现** | 直接在组件内进行 DOM 操作和计算。          | 逻辑拆分到 Composables (`useTimelineGeometry`, `useTimelineNodes`)，更模块化。 |
+| **视觉效果** | 节点均匀分布，通过改变密度因子来调整间距。 | 采用 SVG Mask 实现平滑颜色过渡，节点分布动态变化，视觉效果更丰富。             |
+| **动画**     | 节点密度在特定时间点进行平滑插值过渡。     | 节点位置、颜色、密度均有平滑的缓动动画，过渡更自然。                           |
+| **仪表盘**   | 设计较为复古，有红/白两段式进度。          | 设计更简洁、现代化，单色进度条，视觉信息更清晰。                               |
 
 ## 🛠️ 技术栈
 
-- **核心框架**: [Nuxt 3](https://nuxt.com/) (v3.11.2 或更高版本，根据你实际版本填写)
-- **视图层**: [Vue 3](https://vuejs.org/) (Composition API)
+- **核心框架**: [Nuxt 3](https://nuxt.com/) (v3.17.4)
+- **视图层**: [Vue 3](https://vuejs.org/) (Composition API, `defineModel`)
 - **语言**: [TypeScript](https://www.typescriptlang.org/)
 - **样式方案**: [UnoCSS](https://unocss.dev/) (原子化 CSS 引擎)
-- **构建工具**: Vite (Nuxt 3 内置)
-- **状态管理**: Vue 3 Reactivity API (通过 `ref`, `computed` 等，在 `useSpaceTimeline` Composable 中实现)
-- **代码规范**: ESLint (配置了 `eslint-plugin-unicorn`)
+- **状态管理**: Vue 3 Reactivity API + `@vueuse/core` (`useLocalStorage`)，逻辑集中在 `useSpaceTimeline` Composable 中。
+- **代码规范**: ESLint (基于 `@antfu/eslint-config`)
+- **部署**: 已配置用于 Netlify 和 Docker。
 
 ## 🚀 项目设置与运行
 
 ### 先决条件
 
-- [Node.js](https://nodejs.org/) (建议使用 LTS 版本，例如 v18.x 或 v20.x)
-- [pnpm](https://pnpm.io/installation) (推荐) 或 npm / yarn
+- [Node.js](https://nodejs.org/) (v20.x)
+- [pnpm](https://pnpm.io/installation) (v10.x 或更高版本)
 
 ### 安装依赖
 
 ```bash
-# 使用 pnpm (推荐)
 pnpm install
-
-# 或者使用 npm
-npm install
-
-# 或者使用 yarn
-yarn install
 ```
 
 ### 开发模式 (热重载)
 
-启动开发服务器，通常在 `http://localhost:3000`：
+启动开发服务器，将在 `http://localhost:3001` 上可用：
 
 ```bash
-# 使用 pnpm
 pnpm dev
-
-# 或者使用 npm
-npm run dev
-
-# 或者使用 yarn
-yarn dev
 ```
 
 ### 构建生产版本
 
-将应用构建为静态站点或用于服务器部署：
+将应用构建为用于部署的静态文件 (SPA)：
 
 ```bash
-# 使用 pnpm
 pnpm build
-
-# 或者使用 npm
-npm run build
-
-# 或者使用 yarn
-yarn build
 ```
 
 ### 预览生产版本 (构建后)
 
 ```bash
-# 使用 pnpm
 pnpm preview
-
-# 或者使用 npm
-npm run preview
-
-# 或者使用 yarn
-yarn preview
 ```
 
-## ⚙️ 项目结构与关键组件
+## ⚙️ 核心架构与代码设计
 
-- **`pages/index.vue`**: 主页面，包含用户输入表单、控制按钮和时间显示。它调用 `useSpaceTimeline` Composable 来获取和管理状态。
-- **`components/TimelineSvg.vue`**: 核心的SVG时间线可视化组件。它接收事件数据、总时长和当前时间偏移，并动态绘制节点。
-- **`composables/useSpaceTimeline.ts`**: 主要的状态管理和逻辑处理单元。
-  - 管理事件时间戳 (`timestamps`)、事件名称 (`nodeNames`)。
-  - 处理用户输入的总任务时长 (`missionTimeRaw`) 和倒计时起点 (`timeValueRaw`)。
-  - 控制倒计时开始/停止 (`toggleLaunch`)。
-  - 计算并提供 `timerClock` (文本时钟显示) 和 `currentTimeOffset` (用于SVG平滑动画的精确时间)。
-  - 使用 `requestAnimationFrame` 实现平滑的时间流逝效果。
-  - 与 localStorage 交互以持久化用户数据。
-- **`app.vue`**: Nuxt 应用的根组件，通常用于全局布局或配置。
-- **`nuxt.config.ts`**: Nuxt 项目的配置文件，用于配置模块 (如 UnoCSS)、插件等。
-- **`eslint.config.mjs`** (或 `.eslintrc.js`): ESLint 配置文件。
+- **`composables/useSpaceTimeline.ts`**: **项目的大脑**。这个 Composable 是所有响应式状态的唯一来源 (Single Source of Truth)。它管理着计时器逻辑、所有用户配置（包括新增的 `timelineVersion`）、事件数据以及与 `localStorage` 的交互。
 
-## 💡 代码设计说明
+- **`pages/index.vue`**: **主舞台**。它负责调用 `useSpaceTimeline`，获取所有状态和方法，并将它们通过 `v-model` (利用 `defineModel`) 和 props 传递给各个UI组件。它还根据 `timelineVersion` 的值，条件渲染 V1 或 V2 版本的组件。
 
-- **时间单位**: 项目内部所有时间处理均以 **秒** 为单位。用户输入的时间戳、总任务时长、倒计时起点都应为秒。
-- **默认配置**: 项目启动时会加载 `composables/useSpaceTimeline.ts` 中定义的 `defaultConfig`，包含一组预设的发射事件。
-- **SVG 动画**:
-  - `currentTimeOffset` 是驱动SVG动画的核心。它是一个精确的浮点数，表示当前时间相对于 T-0 的偏移秒数（T- 阶段为负，T+ 阶段为正）。
-  - `TimelineSvg.vue` 组件监听 `currentTimeOffset` 的变化，通过 `requestAnimationFrame` 在 `useSpaceTimeline.ts` 中平滑更新，从而实现节点的平滑移动。
-  - 事件节点在SVG上的位置是根据其 `(固定事件时间 - currentTimeOffset)` 计算得出的。
-- **响应式设计**: 当前项目 **未考虑响应式开发**，默认针对 `1920 * 1080` 屏幕尺寸。
+- **`components/ControlPanel.vue`**: **中央控制器**。一个功能丰富的面板，允许用户修改几乎所有可配置项。它大量使用了 `defineModel` 来简化与父组件的双向数据绑定。
 
-## 🔧 自定义与配置
+- **`components/Falcon9V2/`**: **V2 版本的核心实现（推荐学习）**。
 
-- **默认事件**: 修改 `composables/useSpaceTimeline.ts` 文件中的 `defaultConfig.events` 数组可以更改项目启动时的默认事件列表。
-- **SVG 外观**:
-  - 节点样式 (颜色、大小、形状) 在 `components/TimelineSvg.vue` 的 `plotNodesOnCircle` 函数中定义。
-  - SVG圆弧的曲率、大小等可以通过调整 `components/TimelineSvg.vue` 中的 `circleRadius`、`circleCenterY` 等计算属性来修改。
-  - SVG的总宽度和高度可以在 `pages/index.vue` 中传递给 `<TimelineSvg>` 组件的 `svg-width` 和 `svg-height` props。
-- **样式**: UnoCSS 用于样式定义。可以直接在组件的 `<template>` 中使用原子化类名，或在 `<style scoped>` 块中通过 `@apply` 指令组合。
+  - **`TimelineSvg.vue`**: 视图层，负责渲染 SVG 元素。它自身几乎没有复杂逻辑。
+  - **`composables/useTimelineGeometry.ts`**: 纯计算 Composable，负责处理所有与 SVG 几何相关的计算（如圆心、半径）。
+  - **`composables/useTimelineNodes.ts`**: 核心动态计算 Composable。它接收几何数据和时间数据，计算出每个节点的精确位置、颜色、文本旋转、可见性等所有动态属性。
+  - **`utils/`**: 包含绘图 (`svgDrawing.ts`) 和颜色处理 (`color.ts`) 的辅助函数，进一步提升了代码的模块化和可读性。
 
-## 🔮 未来可能的增强
+- **`components/layout/Adapter.vue`**: **布局适配器**。通过计算浏览器视口与设计稿（1920x1080）的宽高比，使用 CSS `transform: scale()` 来缩放整个应用，确保在任何屏幕上都保持原始设计比例。
 
-- **视频同步**: 集成 `defaultConfig.videoConfig` 中的视频源，并使其播放与时间线同步。
-- **响应式设计**: 适配不同屏幕尺寸。
-- **时间轴缩放/平移**: 允许用户交互式地缩放或平移SVG时间线，以查看更长或更短的时间范围。
-- **更高级的节点自定义**: 允许用户为每个节点设置不同的图标或颜色。
-- **导入/导出配置**: 允许用户导入或导出他们的自定义事件配置。
-- **多语言支持**: 虽然当前是中文，但可以扩展为支持多种语言。
-- **单元测试与端到端测试**: 增加测试以确保代码质量和功能稳定性。
+## 部署
+
+项目已为两种常见的部署方式做好了准备：
+
+1.  **Netlify**: 根目录下的 `netlify.toml` 文件已配置好。它指定了构建命令和正确的重定向规则（`/* -> /index.html 200`），非常适合部署 Nuxt 3 的 SPA 应用。
+2.  **Docker**: 根目录下的 `Dockerfile` 采用多阶段构建，生成一个轻量级的生产镜像，可用于任何支持 Docker 的云平台或服务器。
 
 ## 🙏 致谢与灵感
 
-参考了 [SpaceX Launch Timeline](https://github.com/yuchenliu15/spaceX-timeline)
-此项目是为了试验 Nuxt 3 / Vue 3 并围绕一个有趣的小交互概念而创建的。灵感可能来源于真实的SpaceX发射界面或其他类似的时间线可视化工具。
+本项目的设计灵感来源于真实的 SpaceX 发射界面，并参考了 [SpaceX Launch Timeline by yuchenliu15](https://github.com/yuchenliu15/spaceX-timeline)。
+
+此项目是作为 Nuxt 3 / Vue 3 的一个实践案例而创建的，旨在探索现代前端技术栈在一个有趣、交互性强的场景下的应用。
 
 ---
 

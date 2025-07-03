@@ -1,6 +1,7 @@
 <!-- app/pages/index.vue -->
 <script setup lang="ts">
 const {
+  timelineVersion,
   vehicleName,
   missionName,
   showPanel,
@@ -69,6 +70,7 @@ onUnmounted(() => {
       <ControlPanel
         v-if="showPanel"
         ref="panelRef"
+        v-model:timeline-version="timelineVersion"
         v-model:mission-name="missionName"
         v-model:vehicle-name="vehicleName"
         v-model:current-speed="currentSpeed"
@@ -116,32 +118,59 @@ onUnmounted(() => {
         </div>
       </div>
 
-      <Falcon9V2TimelineSvg
+      <Falcon9V1TimelineSvg
+        v-if="timelineVersion === 'Falcon9V1'"
         class="fixed bottom-0 left-1/2 z-30 -translate-x-1/2"
         :timestamps="processedTimestamps"
         :node-names="nodeNames"
         :mission-duration="missionTimeSeconds"
         :current-time-offset="currentTimeOffset"
-        :svg-width="1920"
+      />
+      <Falcon9V2TimelineSvg
+        v-else-if="timelineVersion === 'Falcon9V2'"
+        class="fixed bottom-0 left-1/2 z-30 -translate-x-1/2"
+        :timestamps="processedTimestamps"
+        :node-names="nodeNames"
+        :mission-duration="missionTimeSeconds"
+        :current-time-offset="currentTimeOffset"
       />
 
+      <!-- 使用 v-if 控制左侧元素的显示 -->
       <!-- 使用 v-if 控制左侧元素的显示 -->
       <template v-if="showLeftGauges">
         <TrapezoidGradient class="absolute bottom-40px left-0 z-1" />
         <div class="absolute bottom-10px left-60px z-30 flex gap-4">
-          <Falcon9V2Gauge
-            label="SPEED"
-            unit="KM/H"
-            :value="currentSpeed"
-            :max-value="30000"
-          />
-          <Falcon9V2Gauge
-            label="ALTITUDE"
-            unit="KM"
-            :value="currentAltitude"
-            :max-value="700"
-            :fraction-digits="1"
-          />
+          <!-- [修改] 根据 timelineVersion 动态渲染左侧 Gauge -->
+          <template v-if="timelineVersion === 'Falcon9V1'">
+            <Falcon9V1Gauge
+              label="SPEED"
+              unit="KM/H"
+              :value="currentSpeed"
+              :max-value="30000"
+            />
+            <Falcon9V1Gauge
+              label="ALTITUDE"
+              unit="KM"
+              :value="currentAltitude"
+              :max-value="700"
+              :fraction-digits="1"
+            />
+          </template>
+          <template v-else-if="timelineVersion === 'Falcon9V2'">
+            <Falcon9V2Gauge
+              label="SPEED"
+              unit="KM/H"
+              :value="currentSpeed"
+              :max-value="30000"
+            />
+            <Falcon9V2Gauge
+              label="ALTITUDE"
+              unit="KM"
+              :value="currentAltitude"
+              :max-value="700"
+              :fraction-digits="1"
+            />
+          </template>
         </div>
       </template>
 
@@ -159,19 +188,37 @@ onUnmounted(() => {
         </div>
         <!-- 模式二: 显示仪表盘 -->
         <div v-if="rightPanelMode === 'gauges'" class="absolute bottom-10px right-60px z-30 flex flex-row-reverse gap-4">
-          <Falcon9V2Gauge
-            label="G-FORCE"
-            unit="G"
-            :value="gForce"
-            :max-value="8"
-            :fraction-digits="1"
-          />
-          <Falcon9V2Gauge
-            label="FUEL"
-            unit="%"
-            :value="fuelPercentage"
-            :max-value="100"
-          />
+          <!-- [修改] 根据 timelineVersion 动态渲染右侧 Gauge -->
+          <template v-if="timelineVersion === 'Falcon9V1'">
+            <Falcon9V1Gauge
+              label="G-FORCE"
+              unit="G"
+              :value="gForce"
+              :max-value="8"
+              :fraction-digits="1"
+            />
+            <Falcon9V1Gauge
+              label="FUEL"
+              unit="%"
+              :value="fuelPercentage"
+              :max-value="100"
+            />
+          </template>
+          <template v-else-if="timelineVersion === 'Falcon9V2'">
+            <Falcon9V2Gauge
+              label="G-FORCE"
+              unit="G"
+              :value="gForce"
+              :max-value="8"
+              :fraction-digits="1"
+            />
+            <Falcon9V2Gauge
+              label="FUEL"
+              unit="%"
+              :value="fuelPercentage"
+              :max-value="100"
+            />
+          </template>
         </div>
       </template>
       <GradientBar class="absolute bottom-0 left-0 z-1" />
