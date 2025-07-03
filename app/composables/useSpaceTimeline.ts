@@ -1,3 +1,5 @@
+// app/composables/useSpaceTimeline.ts
+
 // 默认配置数据
 const defaultConfig = {
   missionName: 'Starlink',
@@ -57,6 +59,8 @@ export function useSpaceTimeline() {
   const displayInfo = useLocalStorage('spacex_display_info', defaultConfig.displayInfo)
 
   const showPanel = ref(true)
+  // [新增] 添加一个状态来控制左侧仪表盘的显示/隐藏，并持久化
+  const showLeftGauges = useLocalStorage<boolean>('spacex_show_left_gauges', true)
 
   const timestamps = useLocalStorage<number[]>('spacex_timestamps_seconds', initialEventTimes)
   const nodeNames = useLocalStorage<string[]>('spacex_nodenames_zh', initialEventNames)
@@ -261,6 +265,7 @@ export function useSpaceTimeline() {
     gForce,
     backgroundImageUrl,
     showPanel,
+    showLeftGauges,
     restoreBackgroundImage,
     timestamps,
     nodeNames,

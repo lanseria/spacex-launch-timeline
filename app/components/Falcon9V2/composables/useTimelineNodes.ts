@@ -80,7 +80,7 @@ export function useTimelineNodes(
     // --- 时间缩放因子 ---
     const avgScale = props.averageDensityFactor?.value ?? 1
     const pastScale = props.pastNodeDensityFactor?.value ?? 2.0
-    const futureScale = props.futureNodeDensityFactor?.value ?? 1.0
+    const futureScale = props.futureNodeDensityFactor?.value ?? 2.0
 
     // --- 根据当前时间，计算出用于动画的实时缩放因子 ---
     let animatedPastScale: number

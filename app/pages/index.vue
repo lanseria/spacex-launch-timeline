@@ -1,10 +1,10 @@
 <!-- app/pages/index.vue -->
 <script setup lang="ts">
-// index.vue 现在只需要它直接渲染或控制的 state
 const {
   vehicleName,
   missionName,
   showPanel,
+  showLeftGauges,
   timerClock,
   displayInfo,
   nodeNames,
@@ -79,6 +79,7 @@ onUnmounted(() => {
         v-model:timestamps="processedTimestamps"
         v-model:node-names="nodeNames"
         v-model:display-info="displayInfo"
+        v-model:show-left-gauges="showLeftGauges"
         :background-image-url="backgroundImageUrl"
         :is-started="isStarted"
         :is-paused="isPaused"
@@ -119,22 +120,26 @@ onUnmounted(() => {
         :current-time-offset="currentTimeOffset"
         :svg-width="1920"
       />
-      <TrapezoidGradient class="absolute bottom-40px left-0 z-1" />
-      <div class="absolute bottom-10px left-60px z-30 flex gap-4">
-        <Falcon9V2Gauge
-          label="SPEED"
-          unit="KM/H"
-          :value="currentSpeed"
-          :max-value="30000"
-        />
-        <Falcon9V2Gauge
-          label="ALTITUDE"
-          unit="KM"
-          :value="currentAltitude"
-          :max-value="700"
-          :fraction-digits="1"
-        />
-      </div>
+
+      <!-- [修改] 使用 v-if 控制左侧元素的显示 -->
+      <template v-if="showLeftGauges">
+        <TrapezoidGradient class="absolute bottom-40px left-0 z-1" />
+        <div class="absolute bottom-10px left-60px z-30 flex gap-4">
+          <Falcon9V2Gauge
+            label="SPEED"
+            unit="KM/H"
+            :value="currentSpeed"
+            :max-value="30000"
+          />
+          <Falcon9V2Gauge
+            label="ALTITUDE"
+            unit="KM"
+            :value="currentAltitude"
+            :max-value="700"
+            :fraction-digits="1"
+          />
+        </div>
+      </template>
 
       <TrapezoidGradient class="absolute bottom-40px right-0 z-1" horizontal-flip />
       <div class="absolute bottom-0 right-0 z-1 h-180px w-550px flex flex-col justify-center pr-40px text-right font-saira">
@@ -149,7 +154,3 @@ onUnmounted(() => {
     </div>
   </LayoutAdapter>
 </template>
-
-<style scoped>
-/* [删除] 这里的所有样式都已移动到 ControlPanel.vue */
-</style>
