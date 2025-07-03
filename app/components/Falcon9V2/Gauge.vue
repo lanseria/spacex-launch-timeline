@@ -137,12 +137,12 @@ const progressArcRedPath = computed(() => {
 const gaugeEndAngle = computed(() => GAUGE_VISUAL_START_ANGLE + TOTAL_GAUGE_SWEEP_ANGLE)
 
 // 起始刻度线坐标
-const startTickOuterPoint = computed(() => polarToCartesian(cx.value - STROKE_WIDTH / 2, cy.value, GAUGE_RADIUS, GAUGE_VISUAL_START_ANGLE))
-const startTickInnerPoint = computed(() => polarToCartesian(cx.value, cy.value, GAUGE_RADIUS - TICK_MARK_LENGTH, GAUGE_VISUAL_START_ANGLE))
+const startTickOuterPoint = computed(() => polarToCartesian(cx.value - STROKE_WIDTH / 2, cy.value, GAUGE_RADIUS, GAUGE_VISUAL_START_ANGLE - 1.6))
+const startTickInnerPoint = computed(() => polarToCartesian(cx.value, cy.value, GAUGE_RADIUS - TICK_MARK_LENGTH, GAUGE_VISUAL_START_ANGLE - 1.6))
 
 // 结束刻度线坐标
-const endTickOuterPoint = computed(() => polarToCartesian(cx.value + STROKE_WIDTH / 2, cy.value, GAUGE_RADIUS, gaugeEndAngle.value))
-const endTickInnerPoint = computed(() => polarToCartesian(cx.value, cy.value, GAUGE_RADIUS - TICK_MARK_LENGTH, gaugeEndAngle.value))
+const endTickOuterPoint = computed(() => polarToCartesian(cx.value + STROKE_WIDTH / 2, cy.value, GAUGE_RADIUS, gaugeEndAngle.value + 1.6))
+const endTickInnerPoint = computed(() => polarToCartesian(cx.value, cy.value, GAUGE_RADIUS - TICK_MARK_LENGTH, gaugeEndAngle.value + 1.6))
 
 // 前景起始刻度线是否可见 (有进度时)
 const showProgressStartTick = computed(() => progressValue.value > 0 && whitePartSweep.value > 0.01)

@@ -1,7 +1,3 @@
-export interface AltitudePoint {
-  time: number // 单位: 秒, 相对于 T-0
-  altitude: number // 单位: KM, 保留一位小数
-}
 // 默认配置数据
 const defaultConfig = {
   missionName: 'Starlink',
@@ -75,105 +71,7 @@ export function useSpaceTimeline() {
   const currentTimeOffset = ref(0) // 当前时间偏移量 (秒), T-为负, T+为正
   const jumpTargetTimeRaw = ref<string | number>('')
 
-  // --- 高度曲线相关 ---
-  const manualAltitude = useLocalStorage<number>('spacex_manual_altitude_km', defaultConfig.altitude)
-  const altitudeProfile = useLocalStorage<AltitudePoint[]>('spacex_altitude_profile_v1', []) // v1用于可能的结构升级
-
-  function calculateAltitudeFromProfile(targetTime: number): number {
-    if (!altitudeProfile.value || altitudeProfile.value.length === 0)
-      return manualAltitude.value // 没有profile数据，返回手动值
-
-    // 确保数据按时间排序
-    const sortedProfile = [...altitudeProfile.value].sort((a, b) => a.time - b.time)
-
-    if (sortedProfile.length === 0)
-      return manualAltitude.value
-    if (sortedProfile.length === 1)
-      return sortedProfile[0]!.altitude // 只有一个点
-
-    // 处理边界情况
-    if (targetTime <= sortedProfile[0]!.time)
-      return sortedProfile[0]!.altitude
-    if (targetTime >= sortedProfile[sortedProfile.length - 1]!.time)
-      return sortedProfile[sortedProfile.length - 1]!.altitude
-
-    // 查找插值点
-    let prevPoint: AltitudePoint | null = null
-    let nextPoint: AltitudePoint | null = null
-
-    for (let i = 0; i < sortedProfile.length - 1; i++) {
-      if (targetTime >= sortedProfile[i]!.time && targetTime <= sortedProfile[i + 1]!.time) {
-        prevPoint = sortedProfile[i]!
-        nextPoint = sortedProfile[i + 1]!
-        break
-      }
-    }
-
-    if (prevPoint && nextPoint) {
-      if (prevPoint.time === nextPoint.time)
-        return prevPoint.altitude // 防止除以零
-
-      const timeRatio = (targetTime - prevPoint.time) / (nextPoint.time - prevPoint.time)
-      const interpolatedAltitude = prevPoint.altitude + (nextPoint.altitude - prevPoint.altitude) * timeRatio
-      return Number.parseFloat(interpolatedAltitude.toFixed(1)) // 保留一位小数
-    }
-
-    // 如果没有找到合适的插值区间 (理论上不应该发生，因为有边界处理)
-    // 可以返回手动值或最后一个点的值作为回退
-    console.warn(`未能为时间 ${targetTime} 找到插值区间，返回手动高度。`)
-    return manualAltitude.value
-  }
-
-  const currentAltitude = computed<number>(() => {
-    if (altitudeProfile.value && altitudeProfile.value.length > 0)
-      return calculateAltitudeFromProfile(currentTimeOffset.value)
-
-    return manualAltitude.value
-  })
-
-  async function loadAltitudeProfile(file: File): Promise<void> {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader()
-      reader.onload = (event) => {
-        try {
-          const content = event.target?.result
-          if (typeof content === 'string') {
-            const parsedData = JSON.parse(content)
-            // 基础校验
-            if (Array.isArray(parsedData) && parsedData.every(p => typeof p.time === 'number' && typeof p.altitude === 'number')) {
-              altitudeProfile.value = parsedData as AltitudePoint[]
-              // eslint-disable-next-line no-console
-              console.log('高度数据加载成功:', altitudeProfile.value)
-              resolve()
-            }
-            else {
-              console.error('无效的高度数据格式。期望得到 {time: number, altitude: number}[] 格式。')
-              reject(new Error('无效的高度数据格式。'))
-            }
-          }
-          else {
-            reject(new Error('无法读取文件内容。'))
-          }
-        }
-        catch (error) {
-          console.error('解析高度数据失败:', error)
-          reject(error)
-        }
-      }
-      reader.onerror = (error) => {
-        console.error('读取文件失败:', error)
-        reject(error)
-      }
-      reader.readAsText(file)
-    })
-  }
-
-  function clearAltitudeProfile(): void {
-    altitudeProfile.value = []
-    // eslint-disable-next-line no-console
-    console.log('高度数据已清空。')
-  }
-  // --- 高度曲线相关结束 ---
+  const currentAltitude = useLocalStorage<number>('spacex_altitude_km', defaultConfig.altitude)
 
   const isTPlus = computed(() => currentTimeOffset.value >= 0)
   const missionTimeSeconds = computed(() => parseSeconds(missionTimeRaw.value))
@@ -377,12 +275,6 @@ export function useSpaceTimeline() {
     resetTimer: resetCoreTimer,
     jumpToTime,
     displayInfo,
-
-    // --- 高度曲线相关导出 ---
-    manualAltitude, // 手动输入的高度 ref
-    altitudeProfile, // 高度数据点数组 ref
-    currentAltitude, // 计算后的当前高度 (computed)
-    loadAltitudeProfile, // 加载数据的函数
-    clearAltitudeProfile, // 清空数据的函数
+    currentAltitude,
   }
 }
