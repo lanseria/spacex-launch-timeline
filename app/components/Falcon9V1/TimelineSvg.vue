@@ -30,7 +30,7 @@ const contentGroupEl = useTemplateRef('contentGroupEl')
 // --- 响应式计算属性 ---
 // 计算有效的SVG宽度和高度，如果 props 未提供，则使用默认值。
 const effectiveSvgWidth = computed(() => props.svgWidth || 1920)
-const effectiveSvgHeight = computed(() => props.svgHeight || 300)
+const effectiveSvgHeight = computed(() => props.svgHeight || 200)
 
 // --- 圆弧几何配置 ---
 // 定义了圆弧在SVG画布中可见部分的张开角度（度）。

@@ -13,7 +13,7 @@ interface GeometryProps {
 
 export function useTimelineGeometry(props: ToRefs<GeometryProps>) {
   const effectiveSvgWidth = computed(() => props.svgWidth?.value || 1920)
-  const effectiveSvgHeight = computed(() => props.svgHeight?.value || 300)
+  const effectiveSvgHeight = computed(() => props.svgHeight?.value || 200)
 
   const circleRadius = computed(() => effectiveSvgWidth.value / 2)
   const circleCenterX = computed(() => effectiveSvgWidth.value / 2)
