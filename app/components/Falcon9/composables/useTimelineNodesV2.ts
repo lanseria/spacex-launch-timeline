@@ -133,9 +133,7 @@ export function useTimelineNodesV2(
       .map((event) => {
         const { timestamp, name, originalIndex } = event
 
-        // --- 位置计算 (逻辑不变) ---
         const mappedTimestamp = mapTime(timestamp)
-        // ... (后续所有计算逻辑保持不变，但使用的是过滤后的 event 对象)
         const mappedCurrentTime = mapTime(currentTimelineTime)
         const virtualTimeRelativeToNow = mappedTimestamp - mappedCurrentTime
         const angularOffset = (virtualTimeRelativeToNow / (props.missionDuration.value / 2)) * (Math.PI / 2)

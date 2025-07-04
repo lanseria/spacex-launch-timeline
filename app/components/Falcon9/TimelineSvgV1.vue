@@ -11,6 +11,7 @@ const props = defineProps<{
   currentTimeOffset?: number
   svgWidth?: number
   svgHeight?: number
+  averageDensityFactor?: number
   pastNodeDensityFactor?: number
   futureNodeDensityFactor?: number
 }>()
@@ -26,7 +27,8 @@ const { processedNodes } = useTimelineNodesV1(propsRefs, geometry)
 // --- 核心绘图函数 (现在变得非常简洁) ---
 function plotNodesOnCircle() {
   const group = contentGroupEl.value
-  if (!group) return
+  if (!group)
+    return
 
   // 获取当前计算出的几何属性值
   const { circleRadius, circleCenterX, circleCenterY } = geometry
@@ -95,7 +97,8 @@ function plotNodesOnCircle() {
 
   // 3. 遍历处理好的节点数据并渲染
   for (const node of processedNodes.value) {
-    if (!node.isVisible) continue
+    if (!node.isVisible)
+      continue
 
     // 绘制节点外圆
     const nodeOuterCircle = document.createElementNS('http://www.w3.org/2000/svg', 'circle')
