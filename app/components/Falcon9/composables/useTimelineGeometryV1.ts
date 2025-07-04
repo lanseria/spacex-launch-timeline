@@ -1,9 +1,4 @@
-// composables/useTimelineGeometry.ts
-
-// 使用 toRefs 替代直接传入 props，以保持响应性
 import type { ToRefs } from 'vue'
-
-import { computed } from 'vue'
 
 // 定义 Props 类型以供 composable 使用
 interface GeometryProps {
@@ -11,7 +6,7 @@ interface GeometryProps {
   svgHeight?: number
 }
 
-export function useTimelineGeometry(props: ToRefs<GeometryProps>) {
+export function useTimelineGeometryV1(props: ToRefs<GeometryProps>) {
   const effectiveSvgWidth = computed(() => props.svgWidth?.value || 1920)
   const effectiveSvgHeight = computed(() => props.svgHeight?.value || 200)
 

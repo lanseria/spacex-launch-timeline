@@ -23,7 +23,6 @@ const {
   currentAltitude,
   fuelPercentage,
   gForce,
-  backgroundImageUrl,
 } = storeToRefs(timelineStore)
 
 const showPanel = ref(true) // showPanel 仍然可以是页面级局部状态
@@ -72,7 +71,7 @@ onUnmounted(() => {
       </div>
 
       <!-- 下面这些组件的 props 绑定保持不变，因为它们的数据现在来自 storeToRefs -->
-      <Falcon9V1TimelineSvg
+      <Falcon9TimelineSvgV1
         v-if="timelineVersion === 'Falcon9V1'"
         class="fixed bottom-0 left-1/2 z-30 -translate-x-1/2"
         :timestamps="processedTimestamps"
@@ -80,7 +79,7 @@ onUnmounted(() => {
         :mission-duration="missionTimeSeconds"
         :current-time-offset="currentTimeOffset"
       />
-      <Falcon9V2TimelineSvg
+      <Falcon9TimelineSvgV2
         v-else-if="timelineVersion === 'Falcon9V2'"
         class="fixed bottom-0 left-1/2 z-30 -translate-x-1/2"
         :timestamps="processedTimestamps"
@@ -93,13 +92,13 @@ onUnmounted(() => {
         <TrapezoidGradient class="absolute bottom-40px left-0 z-1" />
         <div class="absolute bottom-10px left-60px z-30 flex gap-4">
           <template v-if="timelineVersion === 'Falcon9V1'">
-            <Falcon9V1Gauge
+            <Falcon9GaugeV1
               label="SPEED"
               unit="KM/H"
               :value="currentSpeed"
               :max-value="30000"
             />
-            <Falcon9V1Gauge
+            <Falcon9GaugeV1
               label="ALTITUDE"
               unit="KM"
               :value="currentAltitude"
@@ -108,13 +107,13 @@ onUnmounted(() => {
             />
           </template>
           <template v-else-if="timelineVersion === 'Falcon9V2'">
-            <Falcon9V2Gauge
+            <Falcon9GaugeV2
               label="SPEED"
               unit="KM/H"
               :value="currentSpeed"
               :max-value="30000"
             />
-            <Falcon9V2Gauge
+            <Falcon9GaugeV2
               label="ALTITUDE"
               unit="KM"
               :value="currentAltitude"
@@ -137,14 +136,14 @@ onUnmounted(() => {
         </div>
         <div v-if="rightPanelMode === 'gauges'" class="absolute bottom-10px right-60px z-30 flex flex-row-reverse gap-4">
           <template v-if="timelineVersion === 'Falcon9V1'">
-            <Falcon9V1Gauge
+            <Falcon9GaugeV1
               label="G-FORCE"
               unit="G"
               :value="gForce"
               :max-value="8"
               :fraction-digits="1"
             />
-            <Falcon9V1Gauge
+            <Falcon9GaugeV1
               label="FUEL"
               unit="%"
               :value="fuelPercentage"
@@ -152,14 +151,14 @@ onUnmounted(() => {
             />
           </template>
           <template v-else-if="timelineVersion === 'Falcon9V2'">
-            <Falcon9V2Gauge
+            <Falcon9GaugeV2
               label="G-FORCE"
               unit="G"
               :value="gForce"
               :max-value="8"
               :fraction-digits="1"
             />
-            <Falcon9V2Gauge
+            <Falcon9GaugeV2
               label="FUEL"
               unit="%"
               :value="fuelPercentage"

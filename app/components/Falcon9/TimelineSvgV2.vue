@@ -1,8 +1,7 @@
 <script setup lang="ts">
-import type { ProcessedNode } from './composables/useTimelineNodes'
-import { toRefs } from 'vue'
-import { useTimelineGeometry } from './composables/useTimelineGeometry'
-import { useTimelineNodes } from './composables/useTimelineNodes'
+import type { ProcessedNode } from './composables/useTimelineNodesV2'
+import { useTimelineGeometryV2 } from './composables/useTimelineGeometryV2'
+import { useTimelineNodesV2 } from './composables/useTimelineNodesV2'
 import { drawCircle, drawLine, drawPath, drawText } from './utils/svgDrawing'
 
 // --- 组件 Props 定义 ---
@@ -25,10 +24,10 @@ const blurredContentGroupEl = useTemplateRef<SVGGElement>('blurredContentGroupEl
 
 // --- 使用 Composables 获取响应式数据 ---
 const propsRefs = toRefs(props)
-const geometry = useTimelineGeometry(propsRefs)
+const geometry = useTimelineGeometryV2(propsRefs)
 
 // [修改] 直接传递 geometry 对象，不再使用 toRefs()
-const { processedNodes } = useTimelineNodes(propsRefs, geometry)
+const { processedNodes } = useTimelineNodesV2(propsRefs, geometry)
 
 // --- 颜色常量 (仅用于静态元素) ---
 const COLOR_PAST_PRESENT_STR = 'rgba(255, 255, 255, 1)'

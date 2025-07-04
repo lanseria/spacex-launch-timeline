@@ -59,7 +59,7 @@ function easeInOutSine(t: number): number {
 }
 
 // --- Composable 主函数 ---
-export function useTimelineNodes(
+export function useTimelineNodesV2(
   props: ToRefs<NodeProps>,
   geometry: ToRefs<Geometry>,
 ) {
