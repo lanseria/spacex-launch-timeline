@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import { computed } from 'vue'
-
 const props = withDefaults(defineProps<{
   width?: number
   height?: number
@@ -12,7 +10,7 @@ const props = withDefaults(defineProps<{
 })
 
 // 为渐变创建唯一的 ID，防止在同一页面上多次使用组件时发生冲突
-const gradientId = computed(() => `verticalGradient-${Math.random().toString(36).substring(2, 9)}`)
+const gradientId = useId()
 
 // 计算 viewBox 属性，确保 SVG 能够正确缩放
 const viewBox = computed(() => `0 0 ${props.width} ${props.height}`)

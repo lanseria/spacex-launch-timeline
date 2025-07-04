@@ -182,7 +182,7 @@ watch(processedNodes, renderTimeline, { deep: true })
     <svg class="w-full" :width="geometry.effectiveSvgWidth.value" :height="geometry.effectiveSvgHeight.value">
       <defs>
         <filter id="blurMe" x="0" y="0" width="100%" height="100%" filterUnits="userSpaceOnUse">
-          <feGaussianBlur in="SourceGraphic" stdDeviation="50" />
+          <feGaussianBlur in="SourceGraphic" stdDeviation="32" />
         </filter>
         <mask id="timeline-mask">
           <g ref="maskContentGroupEl" />

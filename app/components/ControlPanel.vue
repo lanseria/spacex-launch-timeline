@@ -1,6 +1,6 @@
 <!-- app/components/ControlPanel.vue -->
 <script setup lang="ts">
-import { useTimelineStore } from '~/stores/timeline' // [新增] 导入 store
+import { useTimelineStore } from '~/stores/timeline'
 import DisplayInfoModal from './modal/DisplayInfoModal.vue'
 import EventsModal from './modal/EventsModal.vue'
 
@@ -27,7 +27,7 @@ const { files: selectedBackgroundFiles, open: openBackgroundFileDialog } = useFi
 })
 const currentBackgroundFile = computed(() => selectedBackgroundFiles.value?.[0] || null)
 
-// [新增] 监听到文件变化后，创建 Object URL 并更新 store
+// 监听到文件变化后，创建 Object URL 并更新 store
 watch(currentBackgroundFile, (file) => {
   if (timelineStore.backgroundImageUrl?.startsWith('blob:')) {
     URL.revokeObjectURL(timelineStore.backgroundImageUrl)

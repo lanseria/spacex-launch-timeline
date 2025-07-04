@@ -1,6 +1,4 @@
 <script lang="ts" setup>
-import { computed } from 'vue'
-
 // 只保留了颜色和水平翻转的 props
 const props = withDefaults(defineProps<{
   color?: string
@@ -15,7 +13,7 @@ const svgWidth = 545
 const svgHeight = 142
 
 // 确保组件多次使用时ID不冲突
-const gradientId = computed(() => `trapezoidVerticalGradient-${Math.random().toString(36).substring(2, 9)}`)
+const gradientId = useId()
 
 // 使用您提供的示例中的固定路径数据
 // M344.24 0              -> 移动到 (344.24, 0)
