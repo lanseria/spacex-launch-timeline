@@ -1,10 +1,15 @@
 <!-- app/pages/index.vue -->
 <script setup lang="ts">
+import { storeToRefs } from 'pinia'
+import { useTimelineStore } from '~/stores/timeline'
+
+const timelineStore = useTimelineStore()
+
+// [修改] 使用 storeToRefs 来解构，以保持状态的响应性
 const {
   timelineVersion,
   vehicleName,
   missionName,
-  showPanel,
   showLeftGauges,
   showRightPanel,
   rightPanelMode,
@@ -19,37 +24,14 @@ const {
   fuelPercentage,
   gForce,
   backgroundImageUrl,
-  missionTimeRaw,
-  timeValueRaw,
-  isStarted,
-  isPaused,
-  initialCountdownOffset,
-  jumpTargetTimeRaw,
-  addNode,
-  deleteNode,
-  toggleLaunch,
-  resetTimer,
-  jumpToTime,
-  restoreBackgroundImage,
-} = useSpaceTimeline()
+} = storeToRefs(timelineStore)
 
+const showPanel = ref(true) // showPanel 仍然可以是页面级局部状态
 const panelRef = ref(null)
-const localBackgroundFileObjectUrl = ref<string | null>(null)
-function handleBackgroundDialog(file: File | null) {
-  if (localBackgroundFileObjectUrl.value) {
-    URL.revokeObjectURL(localBackgroundFileObjectUrl.value)
-  }
-  if (file) {
-    const newUrl = URL.createObjectURL(file)
-    backgroundImageUrl.value = newUrl
-    localBackgroundFileObjectUrl.value = newUrl
-  }
-}
 
+// [修改] 在组件卸载时调用 store 的清理函数
 onUnmounted(() => {
-  if (localBackgroundFileObjectUrl.value) {
-    URL.revokeObjectURL(localBackgroundFileObjectUrl.value)
-  }
+  timelineStore.cleanup()
 })
 </script>
 
@@ -66,38 +48,9 @@ onUnmounted(() => {
         </p>
       </div>
 
-      <!-- 使用新的 ControlPanel 组件 -->
       <ControlPanel
         v-if="showPanel"
         ref="panelRef"
-        v-model:timeline-version="timelineVersion"
-        v-model:mission-name="missionName"
-        v-model:vehicle-name="vehicleName"
-        v-model:current-speed="currentSpeed"
-        v-model:current-altitude="currentAltitude"
-        v-model:fuel-percentage="fuelPercentage"
-        v-model:g-force="gForce"
-        v-model:mission-time-raw="missionTimeRaw"
-        v-model:time-value-raw="timeValueRaw"
-        v-model:jump-target-time-raw="jumpTargetTimeRaw"
-        v-model:timestamps="processedTimestamps"
-        v-model:node-names="nodeNames"
-        v-model:display-info="displayInfo"
-        v-model:show-left-gauges="showLeftGauges"
-        v-model:show-right-panel="showRightPanel"
-        v-model:right-panel-mode="rightPanelMode"
-        :background-image-url="backgroundImageUrl"
-        :is-started="isStarted"
-        :is-paused="isPaused"
-        :initial-countdown-offset="initialCountdownOffset"
-        :current-time-offset="currentTimeOffset"
-        @add-node="addNode"
-        @delete-node="deleteNode"
-        @toggle-launch="toggleLaunch"
-        @reset-timer="resetTimer"
-        @jump-to-time="jumpToTime"
-        @restore-background-image="restoreBackgroundImage"
-        @open-background-dialog="handleBackgroundDialog"
       />
 
       <div class="fixed bottom-16px left-1/2 z-50 mx-auto max-w-md text-center font-400 font-saira -translate-x-1/2">
@@ -118,6 +71,7 @@ onUnmounted(() => {
         </div>
       </div>
 
+      <!-- 下面这些组件的 props 绑定保持不变，因为它们的数据现在来自 storeToRefs -->
       <Falcon9V1TimelineSvg
         v-if="timelineVersion === 'Falcon9V1'"
         class="fixed bottom-0 left-1/2 z-30 -translate-x-1/2"
@@ -135,12 +89,9 @@ onUnmounted(() => {
         :current-time-offset="currentTimeOffset"
       />
 
-      <!-- 使用 v-if 控制左侧元素的显示 -->
-      <!-- 使用 v-if 控制左侧元素的显示 -->
       <template v-if="showLeftGauges">
         <TrapezoidGradient class="absolute bottom-40px left-0 z-1" />
         <div class="absolute bottom-10px left-60px z-30 flex gap-4">
-          <!-- [修改] 根据 timelineVersion 动态渲染左侧 Gauge -->
           <template v-if="timelineVersion === 'Falcon9V1'">
             <Falcon9V1Gauge
               label="SPEED"
@@ -174,10 +125,8 @@ onUnmounted(() => {
         </div>
       </template>
 
-      <!-- 右侧面板 -->
       <template v-if="showRightPanel">
         <TrapezoidGradient class="absolute bottom-40px right-0 z-1" horizontal-flip />
-        <!-- 模式一: 显示文本信息 -->
         <div v-if="rightPanelMode === 'displayInfo'" class="absolute bottom-0 right-0 z-1 h-180px w-550px flex flex-col justify-center pr-40px text-right font-saira">
           <div class="text-30px font-600">
             {{ displayInfo.title }}
@@ -186,9 +135,7 @@ onUnmounted(() => {
           <div>{{ displayInfo.line2 }}</div>
           <div>{{ displayInfo.line3 }}</div>
         </div>
-        <!-- 模式二: 显示仪表盘 -->
         <div v-if="rightPanelMode === 'gauges'" class="absolute bottom-10px right-60px z-30 flex flex-row-reverse gap-4">
-          <!-- [修改] 根据 timelineVersion 动态渲染右侧 Gauge -->
           <template v-if="timelineVersion === 'Falcon9V1'">
             <Falcon9V1Gauge
               label="G-FORCE"

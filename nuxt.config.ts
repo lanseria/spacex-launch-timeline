@@ -8,7 +8,7 @@ export default defineNuxtConfig({
     '@nuxtjs/color-mode',
     '@nuxt/eslint',
   ],
-  ssr: false,
+  ssr: true,
   devtools: {
     enabled: false,
   },

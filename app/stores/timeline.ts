@@ -1,11 +1,12 @@
-// app/composables/useSpaceTimeline.ts
+import type { DisplayInfo } from '~/types'
+import { useLocalStorage, useSessionStorage } from '@vueuse/core'
+import { defineStore } from 'pinia'
 
-// 默认配置数据
 const defaultConfig = {
   missionName: 'Starlink',
   vehicle: 'Falcon 9 Block 5',
   speed: 7501,
-  altitude: 64, // 这是手动输入的默认高度
+  altitude: 64,
   fuelPercentage: 100,
   gForce: 1.0,
   backgroundImageUrl: '/assets/images/falcon9_16_9.jpg',
@@ -36,7 +37,8 @@ function parseSeconds(timeValue: string | number): number {
   return Number.isNaN(num) ? 0 : num
 }
 
-export function useSpaceTimeline() {
+export const useTimelineStore = defineStore('timeline', () => {
+  // --- 1. State (状态) ---
   const initialEventTimes = defaultConfig.events.map(event => event.time)
   const initialEventNames = defaultConfig.events.map(event => event.name)
   const minEventTime = Math.min(...initialEventTimes, 0)
@@ -46,21 +48,17 @@ export function useSpaceTimeline() {
     : 3600
   const firstNegativeEventTime = initialEventTimes.find(t => t < 0)
   const defaultCountdownStartSeconds = firstNegativeEventTime ? Math.abs(firstNegativeEventTime) : 60
-  const timelineVersion = useLocalStorage<'Falcon9V1' | 'Falcon9V2'>('spacex_timeline_version', 'Falcon9V2')
 
+  const timelineVersion = useLocalStorage<'Falcon9V1' | 'Falcon9V2'>('spacex_timeline_version', 'Falcon9V2')
   const missionName = useLocalStorage<string>('spacex_mission_name', defaultConfig.missionName)
   const vehicleName = useLocalStorage<string>('spacex_vehicle_name', defaultConfig.vehicle)
   const currentSpeed = useLocalStorage<number>('spacex_telemetry_speed', defaultConfig.speed)
-  const backgroundImageUrl = useSessionStorage<string>(
-    'spacex_persisted_background_image_url',
-    defaultConfig.backgroundImageUrl,
-  )
+  const currentAltitude = useLocalStorage<number>('spacex_altitude_km', defaultConfig.altitude)
+  const fuelPercentage = useLocalStorage<number>('spacex_fuel_percentage', defaultConfig.fuelPercentage)
+  const gForce = useLocalStorage<number>('spacex_g_force', defaultConfig.gForce)
+  const displayInfo = useLocalStorage<DisplayInfo>('spacex_display_info', defaultConfig.displayInfo)
+  const backgroundImageUrl = useSessionStorage<string>('spacex_persisted_background_image_url', defaultConfig.backgroundImageUrl)
 
-  // [修改] 将四个独立的 useLocalStorage 替换为单个对象
-  const displayInfo = useLocalStorage('spacex_display_info', defaultConfig.displayInfo)
-
-  const showPanel = ref(true)
-  // [新增] 添加一个状态来控制左侧仪表盘的显示/隐藏，并持久化
   const showLeftGauges = useLocalStorage<boolean>('spacex_show_left_gauges', true)
   const showRightPanel = useLocalStorage<boolean>('spacex_show_right_panel', true)
   const rightPanelMode = useLocalStorage<'gauges' | 'displayInfo'>('spacex_right_panel_mode', 'displayInfo')
@@ -69,28 +67,30 @@ export function useSpaceTimeline() {
   const nodeNames = useLocalStorage<string[]>('spacex_nodenames_zh', initialEventNames)
 
   const missionTimeRaw = ref(defaultMissionDurationSeconds)
-  const timeValueRaw = ref(defaultCountdownStartSeconds) // 用于设置倒计时起点
+  const timeValueRaw = ref(defaultCountdownStartSeconds)
+  const jumpTargetTimeRaw = ref<string | number>('')
 
+  const isStarted = ref(false)
+  const isPaused = ref(false)
+  const currentTimeOffset = ref(0)
   const timerClock = ref({
     isPositive: false,
     timeString: '00:00:00',
   })
-  const isStarted = ref(false)
-  const isPaused = ref(false)
-  const currentTimeOffset = ref(0) // 当前时间偏移量 (秒), T-为负, T+为正
-  const jumpTargetTimeRaw = ref<string | number>('')
 
-  const currentAltitude = useLocalStorage<number>('spacex_altitude_km', defaultConfig.altitude)
-  const fuelPercentage = useLocalStorage<number>('spacex_fuel_percentage', defaultConfig.fuelPercentage)
-  const gForce = useLocalStorage<number>('spacex_g_force', defaultConfig.gForce)
-
+  // --- 2. Getters (计算属性) ---
   const isTPlus = computed(() => currentTimeOffset.value >= 0)
   const missionTimeSeconds = computed(() => parseSeconds(missionTimeRaw.value))
   const processedTimestamps = computed(() => timestamps.value)
   const initialCountdownOffset = computed(() => {
     const secs = parseSeconds(timeValueRaw.value)
-    return (Number.isNaN(secs) || secs <= 0) ? 0 : -secs // T-时间为负数
+    return (Number.isNaN(secs) || secs <= 0) ? 0 : -secs
   })
+
+  // --- 3. Actions (方法) ---
+  let timerIntervalId: ReturnType<typeof setInterval> | null = null
+  let targetT0TimestampMs: number | null = null
+  let pauseTimeMs: number | null = null
 
   function addNode() {
     timestamps.value.push(0)
@@ -106,22 +106,13 @@ export function useSpaceTimeline() {
     nodeNames.value.splice(index, 1)
   }
 
-  let timerIntervalId: ReturnType<typeof setInterval> | null = null
-  let targetT0TimestampMs: number | null = null // T=0 时刻的 performance.now() 时间戳
-  let pauseTimeMs: number | null = null // 暂停时记录的 performance.now()
-
-  function formatTimeForClock(totalSeconds: number): { isPositive: boolean, timeString: string } {
+  function formatTimeForClock(totalSeconds: number) {
     const absValue = Math.abs(totalSeconds)
     let secondsForFormatting: number
-
-    if (totalSeconds < 0) {
-      // 对于负数，我们希望 -0.1s 显示为 T - 00:00:01 (向上取整到秒)
+    if (totalSeconds < 0)
       secondsForFormatting = Math.ceil(absValue)
-    }
-    else {
-      // 对于正数，我们希望 +0.9s 显示为 T + 00:00:00 (向下取整到秒)
+    else
       secondsForFormatting = Math.floor(absValue)
-    }
 
     const hours = Math.floor(secondsForFormatting / 3600)
     const minutes = Math.floor((secondsForFormatting % 3600) / 60)
@@ -131,8 +122,6 @@ export function useSpaceTimeline() {
     const fMinutes = String(minutes).padStart(2, '0')
     const fSeconds = String(seconds).padStart(2, '0')
 
-    // Determine if the time is positive or negative
-    // Note: Object.is(-0, -0) is true, so we check for -0 specifically
     const isPositive = !(totalSeconds < 0 || Object.is(totalSeconds, -0))
 
     return {
@@ -147,8 +136,7 @@ export function useSpaceTimeline() {
 
     const nowMs = performance.now()
     const elapsedMsSinceT0 = nowMs - targetT0TimestampMs
-    currentTimeOffset.value = elapsedMsSinceT0 / 1000 // 直接计算当前时间点，无需max(0,...)
-
+    currentTimeOffset.value = elapsedMsSinceT0 / 1000
     timerClock.value = formatTimeForClock(currentTimeOffset.value)
   }
 
@@ -160,56 +148,48 @@ export function useSpaceTimeline() {
   }
 
   function _startInternalTimer() {
-    _stopInternalTimer() // 先停止任何现有计时器
+    _stopInternalTimer()
     if (!targetT0TimestampMs) {
-      // 这是一个关键的保护，如果 targetT0TimestampMs 未设定，不应该启动
       console.warn('无法启动计时器：未正确设置目标T0时间戳 (targetT0TimestampMs)。')
-      // isStarted.value = false; // 可以考虑是否在此处重置 isStarted，取决于逻辑
       return
     }
-    updateTimer() // 立即执行一次以更新显示
-    timerIntervalId = setInterval(updateTimer, 50) // 推荐使用 requestAnimationFrame 或更精密的计时器
+    updateTimer()
+    timerIntervalId = setInterval(updateTimer, 50)
   }
 
   function toggleLaunch() {
-    if (!isStarted.value) { // --- 从停止状态到开始 ---
+    if (!isStarted.value) {
       isStarted.value = true
       isPaused.value = false
       pauseTimeMs = null
-      // currentTimeOffset.value 此时应为 initialCountdownOffset.value 或 jumpToTime 设定的值
-      // targetT0TimestampMs 是未来的 T=0 时刻
-      // 例如，如果 currentTimeOffset.value = -60 (T-60s)
-      // 则 targetT0TimestampMs = performance.now() + 60000ms
       targetT0TimestampMs = performance.now() - (currentTimeOffset.value * 1000)
       _startInternalTimer()
     }
-    else if (isPaused.value) { // --- 从暂停状态到继续 ---
+    else if (isPaused.value) {
       isPaused.value = false
       if (pauseTimeMs && targetT0TimestampMs) {
-        // 调整 targetT0TimestampMs 以弥补暂停所花费的时间
         const pausedDurationMs = performance.now() - pauseTimeMs
         targetT0TimestampMs += pausedDurationMs
       }
       pauseTimeMs = null
-      _startInternalTimer() // 使用更新后的 targetT0TimestampMs 重新启动
+      _startInternalTimer()
     }
-    else { // --- 从运行状态到暂停 ---
+    else {
       isPaused.value = true
-      pauseTimeMs = performance.now() // 记录暂停的时刻
+      pauseTimeMs = performance.now()
       _stopInternalTimer()
     }
   }
 
-  function resetCoreTimer() {
+  function resetTimer() {
     _stopInternalTimer()
     isStarted.value = false
     isPaused.value = false
     targetT0TimestampMs = null
     pauseTimeMs = null
-    // 重置时，currentTimeOffset 应回到初始倒计时起点
     currentTimeOffset.value = initialCountdownOffset.value
     timerClock.value = formatTimeForClock(currentTimeOffset.value)
-    jumpTargetTimeRaw.value = '' // 清空跳转输入
+    jumpTargetTimeRaw.value = ''
   }
 
   function jumpToTime() {
@@ -218,47 +198,38 @@ export function useSpaceTimeline() {
       console.warn('无效的跳转时间')
       return
     }
-
-    // 无论计时器当前状态如何，都更新 currentTimeOffset
     currentTimeOffset.value = targetSeconds
-    timerClock.value = formatTimeForClock(targetSeconds) // 立即更新时钟显示
+    timerClock.value = formatTimeForClock(targetSeconds)
 
-    // 根据计时器状态调整 targetT0TimestampMs 和计时器行为
-    if (isStarted.value && !isPaused.value) { // 计时器正在运行
-      _stopInternalTimer() // 先停止当前计时
-      targetT0TimestampMs = performance.now() - (targetSeconds * 1000) // 基于新的offset重新计算T0
-      _startInternalTimer() // 以新的T0启动
-    }
-    else if (isStarted.value && isPaused.value) { // 计时器已启动但已暂停
-      // 仅更新 targetT0TimestampMs，计时器保持暂停状态
-      // 当用户点击“继续”时，会使用这个新的 targetT0TimestampMs
+    if (isStarted.value && !isPaused.value) {
+      _stopInternalTimer()
       targetT0TimestampMs = performance.now() - (targetSeconds * 1000)
-      // pauseTimeMs 保持不变，因为它记录的是上一次暂停的时刻
+      _startInternalTimer()
     }
-    else { // 计时器未启动
-      // targetT0TimestampMs 不需要设置，因为计时器还未开始
-      // 当用户点击“开始”时，会根据当前的 currentTimeOffset (已被jumpToTime更新) 来计算 targetT0TimestampMs
-      targetT0TimestampMs = null // 确保未启动时不持有旧的 targetT0
+    else if (isStarted.value && isPaused.value) {
+      targetT0TimestampMs = performance.now() - (targetSeconds * 1000)
+    }
+    else {
+      targetT0TimestampMs = null
     }
   }
 
   function restoreBackgroundImage() {
-    if (backgroundImageUrl.value?.startsWith('blob:')) {
+    if (backgroundImageUrl.value?.startsWith('blob:'))
       URL.revokeObjectURL(backgroundImageUrl.value)
-    }
     backgroundImageUrl.value = defaultConfig.backgroundImageUrl
   }
 
-  onBeforeUnmount(() => {
+  function cleanup() {
     _stopInternalTimer()
-    if (backgroundImageUrl.value?.startsWith('blob:')) {
+    if (backgroundImageUrl.value?.startsWith('blob:'))
       URL.revokeObjectURL(backgroundImageUrl.value)
-    }
-  })
+  }
 
   // 初始化计时器状态
-  resetCoreTimer()
+  resetTimer()
 
+  // --- 4. 返回所有 state, getters, 和 actions ---
   return {
     timelineVersion,
     missionName,
@@ -268,7 +239,6 @@ export function useSpaceTimeline() {
     fuelPercentage,
     gForce,
     backgroundImageUrl,
-    showPanel,
     showLeftGauges,
     showRightPanel,
     rightPanelMode,
@@ -289,8 +259,9 @@ export function useSpaceTimeline() {
     addNode,
     deleteNode,
     toggleLaunch,
-    resetTimer: resetCoreTimer,
+    resetTimer,
     jumpToTime,
     displayInfo,
+    cleanup,
   }
-}
+})

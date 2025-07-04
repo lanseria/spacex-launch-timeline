@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { debounce } from 'es-toolkit'
+import { useTimelineStore } from '~/stores/timeline' // [新增] 导入 store
 
 const props = defineProps({
   width: {
@@ -11,7 +12,10 @@ const props = defineProps({
     default: '1080',
   },
 })
-const { backgroundImageUrl } = useSpaceTimeline()
+
+// [修改] 从 Pinia store 获取 backgroundImageUrl
+const timelineStore = useTimelineStore()
+const { backgroundImageUrl } = storeToRefs(timelineStore)
 
 const dynamicBackgroundStyle = computed(() => {
   if (backgroundImageUrl.value && backgroundImageUrl.value.trim() !== '') {
@@ -23,9 +27,8 @@ const dynamicBackgroundStyle = computed(() => {
       'background-attachment': 'fixed',
     }
   }
-  // 如果没有有效的 URL，可以返回一个空对象或默认样式
   return {
-    'background-color': '#0f172a', // 例如 slate-900
+    'background-color': '#0f172a',
   }
 })
 
@@ -35,13 +38,11 @@ const style = reactive({
   transform: 'scale(1) translate(-50%, -50%)',
 })
 
-// 获取放大缩小比例
 function getScale() {
   const w = window.innerWidth / +props.width
   const h = window.innerHeight / +props.height
   return w < h ? w : h
 }
-// 设置比例
 function setScale() {
   style.transform = `scale(${getScale()}) translate(-50%, -50%)`
 }

@@ -1,7 +1,8 @@
 {
+  "name": "spacex-launch-timeline",
   "type": "module",
   "private": true,
-  "packageManager": "pnpm@10.11.0",
+  "packageManager": "pnpm@10.12.4",
   "scripts": {
     "build": "nuxi build",
     "dev": "nuxi dev",
